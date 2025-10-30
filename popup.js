@@ -1,0 +1,224 @@
+// Popup script: manage rules in chrome.storage and show per-tab hit counts
+
+const defaults = { rr_rules: [] };
+
+function uid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+async function getRules() {
+  if (!window.chrome || !chrome.storage || !chrome.storage.sync) {
+    // When running outside of an extension, there is no storage.
+    return [];
+  }
+  const allMetaItems = await chrome.storage.sync.get(null);
+  const allBodyItems = await chrome.storage.local.get(null);
+  const rules = [];
+  for (const key in allMetaItems) {
+    if (key.startsWith('rr_rule_')) {
+      const id = key.substring('rr_rule_'.length);
+      const value = allMetaItems[key];
+      const bodyKey = `rr_body_${id}`;
+      const bodyFromLocal = allBodyItems[bodyKey];
+      if (value && typeof value === 'object') {
+        rules.push({
+          id,
+          matchType: value.matchType || 'substring',
+          pattern: value.pattern || '',
+          bodyType: value.bodyType || 'text',
+          // Prefer body from local storage; fall back to any legacy body in sync
+          body: (typeof bodyFromLocal === 'string') ? bodyFromLocal : (value.body || ''),
+        });
+      }
+    }
+  }
+  return rules;
+}
+
+async function setRule(rule) {
+  if (!window.chrome || !chrome.storage || !chrome.storage.sync) {
+    return;
+  }
+  // Write metadata to sync and body to local to avoid per-item quota
+  const metaKey = `rr_rule_${rule.id}`;
+  const metaValue = {
+    matchType: rule.matchType,
+    pattern: rule.pattern,
+    bodyType: rule.bodyType,
+  };
+  const bodyKey = `rr_body_${rule.id}`;
+  const bodyValue = rule.body ?? '';
+  await Promise.all([
+    chrome.storage.sync.set({ [metaKey]: metaValue }),
+    chrome.storage.local.set({ [bodyKey]: bodyValue }),
+  ]);
+}
+
+async function setRuleMeta(rule) {
+  if (!window.chrome || !chrome.storage || !chrome.storage.sync) return;
+  const metaKey = `rr_rule_${rule.id}`;
+  const metaValue = {
+    matchType: rule.matchType,
+    pattern: rule.pattern,
+    bodyType: rule.bodyType,
+  };
+  await chrome.storage.sync.set({ [metaKey]: metaValue });
+}
+
+async function setRuleBody(id, body) {
+  if (!window.chrome || !chrome.storage || !chrome.storage.local) return;
+  const bodyKey = `rr_body_${id}`;
+  await chrome.storage.local.set({ [bodyKey]: body ?? '' });
+}
+
+async function deleteRule(id) {
+  if (!window.chrome || !chrome.storage || !chrome.storage.sync) {
+    return;
+  }
+  const metaKey = `rr_rule_${id}`;
+  const bodyKey = `rr_body_${id}`;
+  await Promise.all([
+    chrome.storage.sync.remove(metaKey),
+    chrome.storage.local.remove(bodyKey),
+  ]);
+}
+
+
+async function getActiveTabId() {
+  if (!window.chrome || !chrome.tabs) return 0;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab?.id;
+}
+
+function render(rules, hits) {
+  const root = document.getElementById('rules');
+  root.innerHTML = '';
+
+  rules.forEach((rule) => {
+    const div = document.createElement('div');
+    div.className = 'rule';
+
+    div.innerHTML = `
+      <div class="row">
+        <select class="matchType">
+          <option value="substring" ${rule.matchType === 'substring' ? 'selected' : ''}>Substring</option>
+          <option value="exact" ${rule.matchType === 'exact' ? 'selected' : ''}>Exact</option>
+        </select>
+        <input class="pattern" placeholder="URL pattern" value="${escapeHtml(rule.pattern)}" />
+        <select class="bodyType">
+          <option value="text" ${rule.bodyType === 'text' ? 'selected' : ''}>Text</option>
+          <option value="json" ${rule.bodyType === 'json' ? 'selected' : ''}>JSON</option>
+        </select>
+      </div>
+      <div class="row">
+        <textarea class="body" placeholder="Replacement body">${escapeHtml(rule.body)}</textarea>
+      </div>
+      <div class="row actions">
+        <button class="delete">Delete</button>
+      </div>
+      <div class="hits">Hits: <strong>${hits?.[rule.id]?.count || 0}</strong> ${hits?.[rule.id]?.lastUrl ? `<span class="small">(last: ${escapeHtml(hits[rule.id].lastUrl)})</span>` : ''}</div>
+    `;
+    // Track rule id on the DOM node for later collection
+    div.__ruleId = rule.id;
+
+    const matchTypeEl = div.querySelector('.matchType');
+    const patternEl = div.querySelector('.pattern');
+    const bodyTypeEl = div.querySelector('.bodyType');
+    const bodyEl = div.querySelector('.body');
+    const deleteBtn = div.querySelector('.delete');
+
+    matchTypeEl.addEventListener('change', () => {
+      rule.matchType = matchTypeEl.value;
+      setRuleMeta(rule);
+    });
+    patternEl.addEventListener('input', () => {
+      rule.pattern = patternEl.value;
+      setRuleMeta(rule);
+    });
+    bodyTypeEl.addEventListener('change', () => {
+      rule.bodyType = bodyTypeEl.value;
+      setRuleMeta(rule);
+    });
+    bodyEl.addEventListener('input', () => {
+      rule.body = bodyEl.value;
+      setRuleBody(rule.id, rule.body);
+    });
+    deleteBtn.addEventListener('click', async () => {
+      await deleteRule(rule.id);
+      await refresh();
+    });
+
+    root.appendChild(div);
+  });
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+document.getElementById('addRule').addEventListener('click', async () => {
+  const newRule = { id: uid(), matchType: 'substring', pattern: '', bodyType: 'text', body: '' };
+  await setRule(newRule);
+  await refresh();
+});
+
+// document.getElementById('saveRules').addEventListener('click', async () => {
+//   // This button is now redundant, but we'll keep the handler for now
+//   // to avoid breaking anything before we remove the button from popup.html
+//   // In practice, changes are saved automatically.
+// });
+
+document.getElementById('clearHits').addEventListener('click', async () => {
+  const tabId = await getActiveTabId();
+  if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
+    await chrome.runtime.sendMessage({ type: 'CLEAR_TAB_HITS', tabId });
+  }
+  await refresh();
+});
+
+// These functions are no longer needed as rules are saved on change.
+/*
+async function collectRulesFromDOM() {
+  const containers = Array.from(document.querySelectorAll('.rule'));
+  return containers.map((div) => {
+    return {
+      id: div.__ruleId || uid(),
+      matchType: div.querySelector('.matchType').value,
+      pattern: div.querySelector('.pattern').value,
+      bodyType: div.querySelector('.bodyType').value,
+      body: div.querySelector('.body').value,
+    };
+  });
+}
+
+async function saveRules() {
+  const rules = await collectRulesFromDOM();
+  await setRules(rules);
+}
+*/
+
+async function refresh() {
+  try {
+    const rules = await getRules();
+    const tabId = await getActiveTabId();
+    let hits = {};
+    if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
+      const resp = await chrome.runtime.sendMessage({ type: 'GET_TAB_HITS', tabId });
+      hits = resp?.hits || {};
+    }
+    render(rules, hits);
+  } catch (e) {
+    console.error('Error refreshing popup:', e);
+    const root = document.getElementById('rules');
+    if (root) {
+      root.innerHTML = `<div class="error">Error loading rules. See console for details.</div>`;
+    }
+  }
+}
+
+refresh();

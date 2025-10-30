@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Response Replacer</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; padding: 12px; width: 360px; }
+      h1 { font-size: 16px; margin: 0 0 8px; }
+      .rule { border: 1px solid #ddd; border-radius: 6px; padding: 8px; margin-bottom: 8px; }
+      .row { display: flex; gap: 8px; margin-bottom: 6px; }
+      .row input, .row select, .row textarea { flex: 1; font-size: 12px; }
+      textarea { min-height: 72px; }
+      .actions { display: flex; gap: 8px; }
+      button { font-size: 12px; padding: 6px 10px; }
+      .small { font-size: 11px; color: #666; }
+      .hits { font-size: 12px; color: #333; margin-top: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Response Replacer</h1>
+      <div class="actions">
+        <button id="addRule">Add Rule</button>
+        <button id="clearHits">Clear Hits</button>
+      </div>
+    </div>
+    <div id="rules"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
