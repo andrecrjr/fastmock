@@ -2,8 +2,6 @@
 
 FastMock is a Chrome extension that intercepts page-level `fetch` and `XMLHttpRequest` calls and returns mocked responses based on rules you define. It’s ideal for prototyping, isolating frontend work from unstable APIs, and reproducing edge cases without changing backend services.
 
-**Note**: The extension shows "FastMock" in the popup UI, while the manifest name is "Response Replacer".
-
 ## Overview
 - Intercepts requests initiated from the page context (not network-wide).
 - Matches requests via `substring` or `exact` URL patterns.
@@ -20,7 +18,7 @@ FastMock is a Chrome extension that intercepts page-level `fetch` and `XMLHttpRe
 
 ## Installation
 - Enable Developer Mode in Chrome (`chrome://extensions/`).
-- Click `Load unpacked` and select the project folder: `c:\Users\andre.junior\OneDrive - HITSS DO BRASIL SERVIÇOS TECNOLOGICOS LTDA\Documentos\mockresponse`.
+- Click `Load unpacked` and select the project folder: `fastmock`.
 - The extension icon will appear; open the popup to start adding rules.
 
 ## Usage
