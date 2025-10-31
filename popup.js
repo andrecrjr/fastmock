@@ -23,6 +23,7 @@ async function getRules() {
       if (value && typeof value === 'object') {
         rules.push({
           id,
+          name: value.name || '',
           matchType: value.matchType || 'substring',
           pattern: value.pattern || '',
           bodyType: value.bodyType || 'text',
@@ -42,6 +43,7 @@ async function setRule(rule) {
   // Write metadata to sync and body to local to avoid per-item quota
   const metaKey = `rr_rule_${rule.id}`;
   const metaValue = {
+    name: rule.name || '',
     matchType: rule.matchType,
     pattern: rule.pattern,
     bodyType: rule.bodyType,
@@ -58,6 +60,7 @@ async function setRuleMeta(rule) {
   if (!window.chrome || !chrome.storage || !chrome.storage.sync) return;
   const metaKey = `rr_rule_${rule.id}`;
   const metaValue = {
+    name: rule.name || '',
     matchType: rule.matchType,
     pattern: rule.pattern,
     bodyType: rule.bodyType,
@@ -96,37 +99,43 @@ function render(rules, hits) {
 
   rules.forEach((rule) => {
     const div = document.createElement('div');
-    div.className = 'rule';
+    div.className = 'rule rounded-md border border-gray-200 p-3 mb-3 shadow-sm bg-white hover:shadow-md transition-shadow';
 
     div.innerHTML = `
-      <div class="row">
-        <select class="matchType">
+      <div class="flex items-center justify-between mb-2">
+        <input class="name flex-1 text-xs border border-gray-300 rounded px-2 py-1 mr-2" placeholder="Rule name" value="${escapeHtml(rule.name || '')}" />
+        <button class="delete inline-flex items-center px-2 py-1 text-xs font-medium rounded-md border border-gray-300 text-gray-800 hover:bg-gray-100">Delete</button>
+      </div>
+      <div class="row mb-2 flex gap-2">
+        <select class="matchType text-xs border border-gray-300 rounded px-2 py-1">
           <option value="substring" ${rule.matchType === 'substring' ? 'selected' : ''}>Substring</option>
           <option value="exact" ${rule.matchType === 'exact' ? 'selected' : ''}>Exact</option>
         </select>
-        <input class="pattern" placeholder="URL pattern" value="${escapeHtml(rule.pattern)}" />
-        <select class="bodyType">
+        <input class="pattern w-full text-xs border border-gray-300 rounded px-2 py-1" placeholder="URL pattern" value="${escapeHtml(rule.pattern)}" />
+        <select class="bodyType text-xs border border-gray-300 rounded px-2 py-1">
           <option value="text" ${rule.bodyType === 'text' ? 'selected' : ''}>Text</option>
           <option value="json" ${rule.bodyType === 'json' ? 'selected' : ''}>JSON</option>
         </select>
       </div>
-      <div class="row">
-        <textarea class="body" placeholder="Replacement body">${escapeHtml(rule.body)}</textarea>
+      <div class="row mb-2">
+        <textarea class="body w-full text-xs border border-gray-300 rounded p-2 min-h-[120px]" placeholder="Replacement body">${escapeHtml(rule.body)}</textarea>
       </div>
-      <div class="row actions">
-        <button class="delete">Delete</button>
-      </div>
-      <div class="hits">Hits: <strong>${hits?.[rule.id]?.count || 0}</strong> ${hits?.[rule.id]?.lastUrl ? `<span class="small">(last: ${escapeHtml(hits[rule.id].lastUrl)})</span>` : ''}</div>
+      <div class="hits text-xs text-gray-600 mt-1">Hits: <strong>${hits?.[rule.id]?.count || 0}</strong> ${hits?.[rule.id]?.lastUrl ? `<span class="small">(last: ${escapeHtml(hits[rule.id].lastUrl)})</span>` : ''}</div>
     `;
     // Track rule id on the DOM node for later collection
     div.__ruleId = rule.id;
 
+    const nameEl = div.querySelector('.name');
     const matchTypeEl = div.querySelector('.matchType');
     const patternEl = div.querySelector('.pattern');
     const bodyTypeEl = div.querySelector('.bodyType');
     const bodyEl = div.querySelector('.body');
     const deleteBtn = div.querySelector('.delete');
 
+    nameEl.addEventListener('input', () => {
+      rule.name = nameEl.value;
+      setRuleMeta(rule);
+    });
     matchTypeEl.addEventListener('change', () => {
       rule.matchType = matchTypeEl.value;
       setRuleMeta(rule);
@@ -162,7 +171,7 @@ function escapeHtml(str) {
 }
 
 document.getElementById('addRule').addEventListener('click', async () => {
-  const newRule = { id: uid(), matchType: 'substring', pattern: '', bodyType: 'text', body: '' };
+  const newRule = { id: uid(), name: '', matchType: 'substring', pattern: '', bodyType: 'text', body: '' };
   await setRule(newRule);
   await refresh();
 });
@@ -252,6 +261,17 @@ async function refresh() {
     const isOn = !!enabled;
     btn.classList.toggle('on', isOn);
     btn.classList.toggle('off', !isOn);
+    // Apply Tailwind styling dynamically
+    const base = ['text-xs','font-semibold','rounded-full','px-3','py-1','border','focus:outline-none','focus:ring-2','focus:ring-blue-500'];
+    base.forEach(cls => btn.classList.add(cls));
+    btn.classList.remove('bg-green-600','border-green-700','bg-red-600','border-red-700');
+    if (isOn) {
+      btn.classList.add('bg-green-600','border-green-700','text-white');
+      btn.classList.remove('bg-red-600','border-red-700');
+    } else {
+      btn.classList.add('bg-red-600','border-red-700','text-white');
+      btn.classList.remove('bg-green-600','border-green-700');
+    }
     btn.setAttribute('aria-checked', String(isOn));
     btn.textContent = isOn ? 'Disable Rules' : 'Enable Rules';
   }

@@ -2,43 +2,22 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>FastMock</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <style>
-      body { font-family: system-ui, sans-serif; margin: 0; padding: 12px; width: 360px; }
-      h1 { font-size: 16px; margin: 0 0 8px; }
-      .header { display: flex; flex-direction: column; gap: 8px; }
-      .rule { border: 1px solid #ddd; border-radius: 6px; padding: 8px; margin-bottom: 8px; }
-      .row { display: flex; gap: 8px; margin-bottom: 6px; }
-      .row input, .row select, .row textarea { flex: 1; font-size: 12px; }
-      textarea { min-height: 72px; }
-      .actions { display: flex; gap: 8px; }
-      button { font-size: 12px; padding: 6px 10px; }
-      .small { font-size: 11px; color: #666; }
-      .hits { font-size: 12px; color: #333; margin-top: 6px; }
-
-      /* Toggle styles aligned with existing button look */
-      .toggle { font-weight: 600; border-radius: 16px; }
-      .toggle.on { background: #2ecc71; color: #fff; border: 1px solid #27ae60; }
-      .toggle.off { background: #e74c3c; color: #fff; border: 1px solid #c0392b; }
-      .toggle:focus { outline: 2px solid #3498db; outline-offset: 2px; }
-      .toggleRow { display: flex; align-items: center; justify-content: space-between; }
-      #statusMessage { min-height: 16px; }
-    </style>
+    <title>FastMock - Request Interceptor</title>
+    <script src="tailwind-v4.js"></script>
   </head>
-  <body>
-    <div class="header">
-      <h1>FastMock</h1>
+  <body class="bg-white text-gray-800 min-w-[600px] max-h-[600px]">
+    <div class="header space-y-2">
+      <h1 class="text-base font-semibold text-gray-900">FastMock</h1>
       <div class="toggleRow">
-        <button id="toggleRules" class="toggle on" role="switch" aria-label="Toggle data processing rules" aria-checked="true" tabindex="0">Disable Rules</button>
-        <div id="statusMessage" class="small" aria-live="polite" aria-atomic="true"></div>
+        <button id="toggleRules" class="toggle on inline-flex items-center justify-center px-3 py-1 text-xs font-semibold rounded-full border focus:outline-none focus:ring-2 focus:ring-blue-500" role="switch" aria-label="Toggle data processing rules" aria-checked="true" tabindex="0">Disable Rules</button>
+        <div id="statusMessage" class="small text-xs text-gray-600" aria-live="polite" aria-atomic="true"></div>
       </div>
       <div class="actions">
-        <button id="addRule">Add Rule</button>
-        <button id="clearHits">Clear Hits</button>
+        <button id="addRule" class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-md border border-gray-300 text-gray-800 hover:bg-gray-100">Add Rule</button>
+        <button id="clearHits" class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-md border border-gray-300 text-gray-800 hover:bg-gray-100">Clear Hits</button>
       </div>
     </div>
-    <div id="rules"></div>
+    <div id="rules" class="space-y-2 min-h-[200px] max-h-[520px] overflow-y-auto pr-1"></div>
 
     <script src="popup.js"></script>
   </body>
