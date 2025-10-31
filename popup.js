@@ -126,6 +126,25 @@ function isValidJSON(text) {
 
 function render(rules, hits) {
   const root = document.getElementById('rules');
+  
+  // Filter rules to only show those with hits
+  const rulesWithHits = rules.filter(rule => hits?.[rule.id]?.count > 0);
+  
+  if (rulesWithHits.length === 0) {
+    root.innerHTML = `
+      <div class="flex items-center justify-center p-8 text-center text-gray-500">
+        <div>
+          <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">No rules triggered</h3>
+          <p class="mt-1 text-sm text-gray-500">No mock rules have been hit in the current tab yet.</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
   root.innerHTML = '';
 
   // Helper: Chevron SVG
@@ -134,7 +153,13 @@ function render(rules, hits) {
       <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
     </svg>`;
 
-  rules.forEach((rule, index) => {
+  // Helper: Options SVG
+  const optionsSvg = `
+    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path>
+    </svg>`;
+
+  rulesWithHits.forEach((rule, index) => {
     const detail = document.createElement('section');
     detail.className = 'rule card';
     detail.setAttribute('name', rule.name || `Rule ${index + 1}`);
@@ -150,12 +175,28 @@ function render(rules, hits) {
     header.tabIndex = 0;
     header.innerHTML = `
       <div class="flex items-center gap-2 min-w-0">
-        <span class="truncate max-w-[280px]">${escapeHtml(rule.name || 'Untitled rule')}</span>
+        <span class="truncate max-w-[200px]">${escapeHtml(rule.name || 'Untitled rule')}</span>
         <span class="text-xs ${rule.enabled ? 'text-green-500' : 'text-gray-400'} shrink-0">${rule.enabled ? 'ON' : 'OFF'}</span>
         <span class="text-xs text-gray-500 shrink-0">${escapeHtml(rule.matchType)}</span>
         <span class="ml-2 text-xs text-gray-500 shrink-0">Hits: <strong>${hits?.[rule.id]?.count || 0}</strong></span>
       </div>
-      <div class="shrink-0">${chevronSvg}</div>
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <button type="button" class="options-btn p-1 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Rule options">
+            ${optionsSvg}
+          </button>
+          <div class="options-dropdown absolute right-0 mt-1 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 hidden">
+            <div class="py-1" role="none">
+              <button class="duplicate-rule block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Duplicate Rule</button>
+              <button class="export-rule block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Export Rule</button>
+              <button class="disable-rule block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Disable Rule</button>
+              <button class="enable-rule block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Enable Rule</button>
+              <button class="delete-rule block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100" role="menuitem">Delete Rule</button>
+            </div>
+          </div>
+        </div>
+        <div class="shrink-0">${chevronSvg}</div>
+      </div>
     `;
 
     // Panel (collapsed by default)
@@ -224,6 +265,15 @@ function render(rules, hits) {
     const statusTextEl = content.querySelector('.statusText');
     const bodyEl = content.querySelector('.body');
     const deleteBtn = content.querySelector('.delete');
+    
+    // Options dropdown elements
+    const optionsBtn = header.querySelector('.options-btn');
+    const optionsDropdown = header.querySelector('.options-dropdown');
+    const duplicateBtn = header.querySelector('.duplicate-rule');
+    const exportBtn = header.querySelector('.export-rule');
+    const disableBtn = header.querySelector('.disable-rule');
+    const enableBtn = header.querySelector('.enable-rule');
+    const deleteRuleBtn = header.querySelector('.delete-rule');
 
     nameEl.addEventListener('input', () => {
       rule.name = nameEl.value;
@@ -300,10 +350,110 @@ function render(rules, hits) {
         flashStatus('Body saved', 'success');
       }
     });
-    deleteBtn.addEventListener('click', async () => {
-      await deleteRule(rule.id);
+    
+    // Options dropdown functionality
+    optionsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close other dropdowns first
+      document.querySelectorAll('.options-dropdown').forEach(dropdown => {
+        if (dropdown !== optionsDropdown) {
+          dropdown.classList.add('hidden');
+        }
+      });
+      // Toggle current dropdown
+      optionsDropdown.classList.toggle('hidden');
+    });
+    
+    // Close dropdown when clicking elsewhere
+    document.addEventListener('click', (e) => {
+      if (!optionsBtn.contains(e.target) && !optionsDropdown.contains(e.target)) {
+        optionsDropdown.classList.add('hidden');
+      }
+    });
+    
+    // Duplicate rule
+    duplicateBtn.addEventListener('click', async () => {
+      optionsDropdown.classList.add('hidden');
+      const newRule = { 
+        ...rule, 
+        id: uid(), 
+        name: `${rule.name || 'Untitled rule'} (Copy)`
+      };
+      await setRule(newRule);
       await refresh();
-      flashStatus('Rule deleted', 'success');
+      flashStatus('Rule duplicated', 'success');
+    });
+    
+    // Export rule
+    exportBtn.addEventListener('click', async () => {
+      optionsDropdown.classList.add('hidden');
+      const ruleForExport = {
+        id: rule.id,
+        name: rule.name,
+        matchType: rule.matchType,
+        pattern: rule.pattern,
+        enabled: rule.enabled,
+        bodyType: rule.bodyType,
+        statusCode: rule.statusCode,
+        statusText: rule.statusText,
+        body: rule.body
+      };
+      
+      const dataStr = JSON.stringify(ruleForExport, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', `fastmock-rule-${rule.name || 'untitled'}.json`);
+      linkElement.click();
+      flashStatus('Rule exported', 'success');
+    });
+    
+    // Disable rule
+    disableBtn.addEventListener('click', async () => {
+      optionsDropdown.classList.add('hidden');
+      rule.enabled = false;
+      await setRuleMeta(rule);
+      // Update the header display to show ON/OFF status
+      const statusSpan = header.querySelector('span.text-xs.text-green-500, span.text-xs.text-gray-400');
+      if (statusSpan) {
+        statusSpan.textContent = 'OFF';
+        statusSpan.className = 'text-xs text-gray-400 shrink-0';
+      }
+      flashStatus('Rule disabled', 'success');
+    });
+    
+    // Enable rule
+    enableBtn.addEventListener('click', async () => {
+      optionsDropdown.classList.add('hidden');
+      rule.enabled = true;
+      await setRuleMeta(rule);
+      // Update the header display to show ON/OFF status
+      const statusSpan = header.querySelector('span.text-xs.text-green-500, span.text-xs.text-gray-400');
+      if (statusSpan) {
+        statusSpan.textContent = 'ON';
+        statusSpan.className = 'text-xs text-green-500 shrink-0';
+      }
+      flashStatus('Rule enabled', 'success');
+    });
+    
+    // Delete rule from options
+    deleteRuleBtn.addEventListener('click', async () => {
+      optionsDropdown.classList.add('hidden');
+      if (confirm(`Delete rule "${rule.name || 'Untitled rule'}"?`)) {
+        await deleteRule(rule.id);
+        await refresh();
+        flashStatus('Rule deleted', 'success');
+      }
+    });
+    
+    // Delete rule from panel (keep existing functionality)
+    deleteBtn.addEventListener('click', async () => {
+      if (confirm(`Delete rule "${rule.name || 'Untitled rule'}"?`)) {
+        await deleteRule(rule.id);
+        await refresh();
+        flashStatus('Rule deleted', 'success');
+      }
     });
 
     function setOpen(isOpen) {
@@ -322,9 +472,12 @@ function render(rules, hits) {
       }
     }
 
-    header.addEventListener('click', () => {
-      const nowOpen = header.getAttribute('aria-expanded') !== 'true';
-      setOpen(nowOpen);
+    header.addEventListener('click', (e) => {
+      // Don't toggle if clicked on the options button or dropdown
+      if (!e.target.closest('.options-btn') && !e.target.closest('.options-dropdown')) {
+        const nowOpen = header.getAttribute('aria-expanded') !== 'true';
+        setOpen(nowOpen);
+      }
     });
     header.addEventListener('keydown', (ev) => {
       const key = ev.key;
@@ -332,7 +485,10 @@ function render(rules, hits) {
       const idx = headers.indexOf(header);
       if (key === 'Enter' || key === ' ') {
         ev.preventDefault();
-        header.click();
+        // Don't trigger if we're focused on the options button
+        if (!ev.target.closest('.options-btn')) {
+          header.click();
+        }
       } else if (key === 'ArrowDown') {
         ev.preventDefault();
         const next = headers[idx + 1] || headers[0];
