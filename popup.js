@@ -93,71 +93,214 @@ async function getActiveTabId() {
   return tab?.id;
 }
 
+// Track accordion open state across renders
+const __accordionOpen = Object.create(null);
+
+// Lightweight, centralized status feedback with semantic colors
+function flashStatus(message, type = 'info', timeout = 2000) {
+  const el = document.getElementById('statusMessage');
+  if (!el) return;
+  const classes = ['text-gray-600','text-blue-600','text-green-600','text-red-600'];
+  classes.forEach(c => el.classList.remove(c));
+  const map = { info: 'text-blue-600', success: 'text-green-600', error: 'text-red-600' };
+  el.classList.add(map[type] || 'text-gray-600');
+  el.textContent = message;
+  setTimeout(() => {
+    el.textContent = '';
+    classes.forEach(c => el.classList.remove(c));
+    el.classList.add('text-gray-600');
+  }, timeout);
+}
+
+function isValidJSON(text) {
+  try { JSON.parse(text); return true; } catch { return false; }
+}
+
 function render(rules, hits) {
   const root = document.getElementById('rules');
   root.innerHTML = '';
 
-  rules.forEach((rule) => {
-    const div = document.createElement('div');
-    div.className = 'rule rounded-md border border-gray-200 p-3 mb-3 shadow-sm bg-white hover:shadow-md transition-shadow';
+  // Helper: Chevron SVG
+  const chevronSvg = `
+    <svg class="chevron h-4 w-4 text-gray-500 transition-transform duration-200 ease-in-out" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+    </svg>`;
 
-    div.innerHTML = `
-      <div class="flex items-center justify-between mb-2">
-        <input class="name flex-1 text-xs border border-gray-300 rounded px-2 py-1 mr-2" placeholder="Rule name" value="${escapeHtml(rule.name || '')}" />
-        <button class="delete inline-flex items-center px-2 py-1 text-xs font-medium rounded-md border border-gray-300 text-gray-800 hover:bg-gray-100">Delete</button>
+  rules.forEach((rule, index) => {
+    const detail = document.createElement('section');
+    detail.className = 'rule card';
+    detail.setAttribute('name', rule.name || `Rule ${index + 1}`);
+    detail.__ruleId = rule.id;
+
+    // Header button
+    const header = document.createElement('button');
+    header.className = 'w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer';
+    header.id = `header-${rule.id}`;
+    header.setAttribute('aria-expanded', 'false');
+    header.setAttribute('aria-controls', `panel-${rule.id}`);
+    header.setAttribute('data-acc-header', 'true');
+    header.tabIndex = 0;
+    header.innerHTML = `
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="truncate max-w-[280px]">${escapeHtml(rule.name || 'Untitled rule')}</span>
+        <span class="text-xs text-gray-500 shrink-0">${escapeHtml(rule.matchType)}</span>
+        <span class="ml-2 text-xs text-gray-500 shrink-0">Hits: <strong>${hits?.[rule.id]?.count || 0}</strong></span>
+      </div>
+      <div class="shrink-0">${chevronSvg}</div>
+    `;
+
+    // Panel (collapsed by default)
+    const panel = document.createElement('div');
+    panel.id = `panel-${rule.id}`;
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-labelledby', header.id);
+    panel.className = 'overflow-hidden max-h-0 transition-all duration-300 ease-in-out';
+
+    // Panel content
+    const content = document.createElement('div');
+    content.className = 'px-3 pb-3 pt-0';
+    content.innerHTML = `
+      <div class="flex items-center justify-between mb-2 mt-1">
+        <input class="name input flex-1 mr-2" placeholder="Rule name" value="${escapeHtml(rule.name || '')}" aria-label="Rule name" />
+        <button class="delete btn btn-danger">Delete</button>
       </div>
       <div class="row mb-2 flex gap-2">
-        <select class="matchType text-xs border border-gray-300 rounded px-2 py-1">
+        <select class="matchType select" aria-label="Match type">
           <option value="substring" ${rule.matchType === 'substring' ? 'selected' : ''}>Substring</option>
           <option value="exact" ${rule.matchType === 'exact' ? 'selected' : ''}>Exact</option>
         </select>
-        <input class="pattern w-full text-xs border border-gray-300 rounded px-2 py-1" placeholder="URL pattern" value="${escapeHtml(rule.pattern)}" />
-        <select class="bodyType text-xs border border-gray-300 rounded px-2 py-1">
+        <input class="pattern input w-full" placeholder="URL pattern" value="${escapeHtml(rule.pattern)}" aria-label="URL pattern" />
+        <select class="bodyType select" aria-label="Body type">
           <option value="text" ${rule.bodyType === 'text' ? 'selected' : ''}>Text</option>
           <option value="json" ${rule.bodyType === 'json' ? 'selected' : ''}>JSON</option>
         </select>
       </div>
       <div class="row mb-2">
-        <textarea class="body w-full text-xs border border-gray-300 rounded p-2 min-h-[120px]" placeholder="Replacement body">${escapeHtml(rule.body)}</textarea>
+        <textarea class="body textarea" placeholder="Replacement body" aria-label="Replacement body">${escapeHtml(rule.body)}</textarea>
+        <div class="validation text-xs text-red-600 mt-1 hidden" data-error="json" role="alert"></div>
       </div>
       <div class="hits text-xs text-gray-600 mt-1">Hits: <strong>${hits?.[rule.id]?.count || 0}</strong> ${hits?.[rule.id]?.lastUrl ? `<span class="small">(last: ${escapeHtml(hits[rule.id].lastUrl)})</span>` : ''}</div>
     `;
-    // Track rule id on the DOM node for later collection
-    div.__ruleId = rule.id;
 
-    const nameEl = div.querySelector('.name');
-    const matchTypeEl = div.querySelector('.matchType');
-    const patternEl = div.querySelector('.pattern');
-    const bodyTypeEl = div.querySelector('.bodyType');
-    const bodyEl = div.querySelector('.body');
-    const deleteBtn = div.querySelector('.delete');
+    panel.appendChild(content);
+    detail.appendChild(header);
+    detail.appendChild(panel);
+
+    // Event wiring
+    const nameEl = content.querySelector('.name');
+    const matchTypeEl = content.querySelector('.matchType');
+    const patternEl = content.querySelector('.pattern');
+    const bodyTypeEl = content.querySelector('.bodyType');
+    const bodyEl = content.querySelector('.body');
+    const deleteBtn = content.querySelector('.delete');
 
     nameEl.addEventListener('input', () => {
       rule.name = nameEl.value;
       setRuleMeta(rule);
+      detail.setAttribute('name', rule.name || `Rule ${index + 1}`);
+      const nameSpan = header.querySelector('span.truncate');
+      if (nameSpan) nameSpan.textContent = rule.name || 'Untitled rule';
+      flashStatus('Name saved', 'success');
     });
     matchTypeEl.addEventListener('change', () => {
       rule.matchType = matchTypeEl.value;
       setRuleMeta(rule);
+      const typeSpan = header.querySelector('span.text-xs.text-gray-500');
+      if (typeSpan) typeSpan.textContent = rule.matchType;
+      flashStatus('Match type updated', 'success');
     });
     patternEl.addEventListener('input', () => {
       rule.pattern = patternEl.value;
       setRuleMeta(rule);
+      flashStatus('Pattern saved', 'success');
     });
     bodyTypeEl.addEventListener('change', () => {
       rule.bodyType = bodyTypeEl.value;
       setRuleMeta(rule);
+      // Revalidate JSON when switching types
+      const errorEl = content.querySelector('[data-error="json"]');
+      if (errorEl) errorEl.classList.add('hidden');
+      bodyEl.removeAttribute('aria-invalid');
+      bodyEl.classList.remove('ring-1','ring-red-300','border-red-500','ring-green-300','border-green-500');
+      flashStatus('Body type updated', 'success');
     });
     bodyEl.addEventListener('input', () => {
       rule.body = bodyEl.value;
       setRuleBody(rule.id, rule.body);
+      if (rule.bodyType === 'json') {
+        const ok = isValidJSON(rule.body);
+        const errorEl = content.querySelector('[data-error="json"]');
+        if (!ok) {
+          bodyEl.setAttribute('aria-invalid','true');
+          bodyEl.classList.remove('ring-green-300','border-green-500');
+          bodyEl.classList.add('ring-1','ring-red-300','border-red-500');
+          if (errorEl) { errorEl.textContent = 'Invalid JSON. It will be returned as text.'; errorEl.classList.remove('hidden'); }
+          flashStatus('Invalid JSON', 'error');
+        } else {
+          bodyEl.removeAttribute('aria-invalid');
+          bodyEl.classList.remove('ring-1','ring-red-300','border-red-500');
+          bodyEl.classList.add('ring-green-300','border-green-500');
+          if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
+          flashStatus('Body saved', 'success');
+        }
+      } else {
+        flashStatus('Body saved', 'success');
+      }
     });
     deleteBtn.addEventListener('click', async () => {
       await deleteRule(rule.id);
       await refresh();
+      flashStatus('Rule deleted', 'success');
     });
 
-    root.appendChild(div);
+    function setOpen(isOpen) {
+      header.setAttribute('aria-expanded', String(!!isOpen));
+      const chevron = header.querySelector('.chevron');
+      if (chevron) {
+        chevron.classList.toggle('rotate-180', !!isOpen);
+      }
+      // Use Tailwind classes to animate height
+      panel.classList.toggle('max-h-0', !isOpen);
+      panel.classList.toggle('max-h-[520px]', !!isOpen);
+      __accordionOpen[rule.id] = !!isOpen;
+      if (isOpen) {
+        // Focus first interactive element for accessibility
+        setTimeout(() => { try { nameEl.focus(); } catch {} }, 150);
+      }
+    }
+
+    header.addEventListener('click', () => {
+      const nowOpen = header.getAttribute('aria-expanded') !== 'true';
+      setOpen(nowOpen);
+    });
+    header.addEventListener('keydown', (ev) => {
+      const key = ev.key;
+      const headers = Array.from(root.querySelectorAll('[data-acc-header]'));
+      const idx = headers.indexOf(header);
+      if (key === 'Enter' || key === ' ') {
+        ev.preventDefault();
+        header.click();
+      } else if (key === 'ArrowDown') {
+        ev.preventDefault();
+        const next = headers[idx + 1] || headers[0];
+        next?.focus();
+      } else if (key === 'ArrowUp') {
+        ev.preventDefault();
+        const prev = headers[idx - 1] || headers[headers.length - 1];
+        prev?.focus();
+      } else if (key === 'Home') {
+        ev.preventDefault();
+        headers[0]?.focus();
+      } else if (key === 'End') {
+        ev.preventDefault();
+        headers[headers.length - 1]?.focus();
+      }
+    });
+
+    // Apply initial open state
+    setOpen(__accordionOpen[rule.id] === true);
+
+    root.appendChild(detail);
   });
 }
 
@@ -225,7 +368,7 @@ async function refresh() {
     console.error('Error refreshing popup:', e);
     const root = document.getElementById('rules');
     if (root) {
-      root.innerHTML = `<div class="error">Error loading rules. See console for details.</div>`;
+      root.innerHTML = `<div class="card p-3 text-sm text-red-700 bg-red-50 border-red-200">Error loading rules. See console for details.</div>`;
     }
   }
 }
@@ -236,11 +379,7 @@ async function refresh() {
   const statusEl = document.getElementById('statusMessage');
   if (!btn) return;
 
-  function showStatus(message) {
-    if (!statusEl) return;
-    statusEl.textContent = message;
-    setTimeout(() => { statusEl.textContent = ''; }, 2000);
-  }
+  function showStatus(message, type = 'info') { flashStatus(message, type); }
 
   async function getEnabled() {
     if (!window.chrome || !chrome.storage || !chrome.storage.sync) return true;
@@ -292,7 +431,7 @@ async function refresh() {
     const next = !currentlyEnabled;
     await setEnabled(next);
     updateButtonUI(next);
-    showStatus(next ? 'Rules enabled' : 'Rules disabled');
+    showStatus(next ? 'Rules enabled' : 'Rules disabled', next ? 'success' : 'info');
   });
 
   btn.addEventListener('keydown', async (ev) => {

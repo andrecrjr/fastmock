@@ -70,6 +70,43 @@ FastMock is a Chrome extension that intercepts page-level `fetch` and `XMLHttpRe
   - Use DevTools console to observe logs from `injected.js` and content script.
   - Reload the extension from `chrome://extensions/` when you change source files.
 
+## Design System (Tailwind CSS)
+- Color scheme:
+  - Primary: Tailwind `blue` (actions, focus rings)
+  - Neutral: Tailwind `gray`/`slate` (surfaces, borders, text)
+  - Success: Tailwind `green` (positive feedback)
+  - Danger: Tailwind `red` (destructive actions, validation errors)
+- Typography:
+  - Base `text-sm` for headers, `text-xs` for inputs and meta text
+  - Clear hierarchy via `font-semibold` in headers and action buttons
+- Spacing:
+  - Consistent `px-3 py-2` for headers, `px-3 py-1` for controls
+  - `space-y-2` for stacked lists; `gap-2` for inline control groups
+- Components (defined via `@layer components` in `popup.html`):
+  - `btn`, `btn-primary`, `btn-neutral`, `btn-danger`
+  - `input`, `select`, `textarea`, `card`, `label`
+  - All interactive elements include `focus-visible` rings for accessibility
+- States & feedback:
+  - The status area (`#statusMessage`) shows transient messages for saves, errors, and toggles with semantic colors.
+
+## Accessibility
+- Keyboard navigation:
+  - Rule headers are focusable; `Enter`/`Space` toggles the accordion.
+  - Arrow keys navigate between rule headers; `Home`/`End` jumps to first/last.
+- ARIA:
+  - Toggle uses `role="switch"` with `aria-checked` state.
+  - Panels use `role="region"` and are labelled by their headers.
+  - Validation sets `aria-invalid` and displays an alert region when JSON is invalid.
+- Contrast:
+  - Buttons and focus rings use accessible color pairs (e.g. blue-600 on white).
+
+## Responsive Layouts
+- The popup adapts from `min-w-[360px]` (compact) up to `md:min-w-[600px]`.
+- Content scrolls inside the rules list while the header remains accessible.
+
+## Notes on Preview Functionality
+- There is no preview pane in the popup UI. The redesign removes any prior preview-related UI, while preserving all rule management features.
+
 ## Troubleshooting
 - Mocks not applying:
   - Confirm the pattern matches the request URL; try `substring` first.
