@@ -25,7 +25,7 @@ function isInjected() {
     // Remove the tag only after it loads to avoid cancelling execution
     script.addEventListener('load', () => {
       try {
-        console.log('Response Replacer: injected.js loaded');
+        console.log('FastMock: injected.js loaded');
         script.remove();
       } catch {}
     });
@@ -37,19 +37,19 @@ function isInjected() {
         try {
           const resp = await chrome.runtime.sendMessage({ type: 'INJECT_MAIN_WORLD' });
           if (!resp || !resp.ok) {
-            console.warn('Response Replacer: background MAIN-world injection failed', resp?.error);
+            console.warn('FastMock: background MAIN-world injection failed', resp?.error);
           } else {
-            console.log('Response Replacer: background MAIN-world injection succeeded');
+            console.log('FastMock: background MAIN-world injection succeeded');
           }
         } catch (err) {
-          console.warn('Response Replacer: failed to request MAIN-world injection', err);
+          console.warn('FastMock: failed to request MAIN-world injection', err);
         }
       }
       // Send rules once injection is likely in place
       try { await loadRules(); } catch {}
     }, 50);
   } catch (e) {
-    console.warn('Response Replacer: failed to inject', e);
+    console.warn('FastMock: failed to inject', e);
   }
 })();
 
@@ -89,7 +89,7 @@ async function loadRules() {
   // Send to page
   try {
     sendRulesToPage(rules);
-    console.log('Response Replacer: global enabled:', globalEnabled, 'sending', rules.length, 'rules');
+    console.log('FastMock: global enabled:', globalEnabled, 'sending', rules.length, 'rules');
   } catch {}
   return rules;
 }

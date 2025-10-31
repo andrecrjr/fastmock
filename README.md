@@ -111,7 +111,7 @@ FastMock is a Chrome extension that intercepts page-level `fetch` and `XMLHttpRe
 - Mocks not applying:
   - Confirm the pattern matches the request URL; try `substring` first.
   - Ensure the page initiates the request via `fetch`/`XHR` (service worker or extension requests aren’t intercepted).
-  - Check console logs: look for "Response Replacer: injected.js loaded" and any warnings.
+  - Check console logs: look for "FastMock: injected.js loaded" and any warnings.
 - JSON body not returning as expected:
   - Validate the JSON; invalid JSON is returned as a string.
 - No hits recorded:
