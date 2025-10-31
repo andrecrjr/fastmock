@@ -3,7 +3,7 @@
 // { id: string, pattern: string, matchType: 'substring' | 'exact', bodyType: 'text' | 'json', body: string }
 
 (function () {
-  console.log('RR injected script running');
+  console.log('FastMock RR injected script running');
   const RR_NS = '__RR__';
   const state = {
     rules: [],
@@ -38,8 +38,20 @@
   }
 
   function matchesRule(url, rule) {
+    // If globally disabled, no rules should match
+    if (rule.globalEnabled === false) {
+      return false;
+    }
+    // If the rule is individually disabled, don't match anything
+    if (rule.enabled === false) {
+      return false;
+    }
     const target = normalizeUrl(url);
     const rawPattern = sanitizePattern(rule.pattern);
+    // If the pattern is empty, don't match anything
+    if (!rawPattern) {
+      return false;
+    }
     const absPattern = normalizeUrl(rawPattern);
     if (rule.matchType === 'exact') {
       // Compare normalized absolute forms for exact matching
@@ -130,7 +142,12 @@
   }
 
   function updateRules(newRules) {
-    state.rules = Array.isArray(newRules) ? newRules.filter(Boolean) : [];
+    state.rules = Array.isArray(newRules) ? 
+      newRules.filter(Boolean).map(rule => ({
+        ...rule,
+        enabled: rule.enabled !== false, // default to true when unset
+        globalEnabled: rule.globalEnabled !== false // default to true when unset
+      })) : [];
   }
 
   // Receive rules updates from content script

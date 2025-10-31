@@ -26,6 +26,7 @@ async function getRules() {
           name: value.name || '',
           matchType: value.matchType || 'substring',
           pattern: value.pattern || '',
+          enabled: value.enabled !== false, // default to true when unset
           bodyType: value.bodyType || 'text',
           // Prefer body from local storage; fall back to any legacy body in sync
           body: (typeof bodyFromLocal === 'string') ? bodyFromLocal : (value.body || ''),
@@ -46,6 +47,7 @@ async function setRule(rule) {
     name: rule.name || '',
     matchType: rule.matchType,
     pattern: rule.pattern,
+    enabled: rule.enabled !== false, // default to true when unset
     bodyType: rule.bodyType,
   };
   const bodyKey = `rr_body_${rule.id}`;
@@ -63,6 +65,7 @@ async function setRuleMeta(rule) {
     name: rule.name || '',
     matchType: rule.matchType,
     pattern: rule.pattern,
+    enabled: rule.enabled !== false, // default to true when unset
     bodyType: rule.bodyType,
   };
   await chrome.storage.sync.set({ [metaKey]: metaValue });
@@ -143,6 +146,7 @@ function render(rules, hits) {
     header.innerHTML = `
       <div class="flex items-center gap-2 min-w-0">
         <span class="truncate max-w-[280px]">${escapeHtml(rule.name || 'Untitled rule')}</span>
+        <span class="text-xs ${rule.enabled ? 'text-green-500' : 'text-gray-400'} shrink-0">${rule.enabled ? 'ON' : 'OFF'}</span>
         <span class="text-xs text-gray-500 shrink-0">${escapeHtml(rule.matchType)}</span>
         <span class="ml-2 text-xs text-gray-500 shrink-0">Hits: <strong>${hits?.[rule.id]?.count || 0}</strong></span>
       </div>
@@ -162,7 +166,11 @@ function render(rules, hits) {
     content.innerHTML = `
       <div class="flex items-center justify-between mb-2 mt-1">
         <input class="name input flex-1 mr-2" placeholder="Rule name" value="${escapeHtml(rule.name || '')}" aria-label="Rule name" />
-        <button class="delete btn btn-danger">Delete</button>
+        <label class="switch flex items-center cursor-pointer">
+          <input type="checkbox" class="enabled-toggle" ${rule.enabled ? 'checked' : ''} aria-label="Enable rule" />
+          <span class="slider ml-2"></span>
+        </label>
+        <button class="delete btn btn-danger ml-2">Delete</button>
       </div>
       <div class="row mb-2 flex gap-2">
         <select class="matchType select" aria-label="Match type">
@@ -213,6 +221,18 @@ function render(rules, hits) {
       rule.pattern = patternEl.value;
       setRuleMeta(rule);
       flashStatus('Pattern saved', 'success');
+    });
+    const enabledToggle = content.querySelector('.enabled-toggle');
+    enabledToggle.addEventListener('change', () => {
+      rule.enabled = enabledToggle.checked;
+      setRuleMeta(rule);
+      // Update the header display to show ON/OFF status
+      const statusSpan = header.querySelector('span.text-xs.text-green-500, span.text-xs.text-gray-400');
+      if (statusSpan) {
+        statusSpan.textContent = rule.enabled ? 'ON' : 'OFF';
+        statusSpan.className = `text-xs ${rule.enabled ? 'text-green-500' : 'text-gray-400'} shrink-0`;
+      }
+      flashStatus(rule.enabled ? 'Rule enabled' : 'Rule disabled', 'success');
     });
     bodyTypeEl.addEventListener('change', () => {
       rule.bodyType = bodyTypeEl.value;
@@ -314,7 +334,7 @@ function escapeHtml(str) {
 }
 
 document.getElementById('addRule').addEventListener('click', async () => {
-  const newRule = { id: uid(), name: '', matchType: 'substring', pattern: '', bodyType: 'text', body: '' };
+  const newRule = { id: uid(), name: '', matchType: 'substring', pattern: '', enabled: true, bodyType: 'text', body: '' };
   await setRule(newRule);
   await refresh();
 });
