@@ -80,6 +80,8 @@ async function loadRules() {
           pattern: value.pattern || '',
           enabled: value.enabled !== false, // default to true when unset
           bodyType: value.bodyType || 'text',
+          statusCode: value.statusCode || 200,
+          statusText: value.statusText || '',
           body: (typeof bodyFromLocal === 'string') ? bodyFromLocal : (value.body || ''),
           globalEnabled: globalEnabled // Pass global state to page script
         });

@@ -28,6 +28,7 @@ async function getRules() {
           pattern: value.pattern || '',
           enabled: value.enabled !== false, // default to true when unset
           bodyType: value.bodyType || 'text',
+          statusCode: value.statusCode || 200, // default to 200 when unset
           // Prefer body from local storage; fall back to any legacy body in sync
           body: (typeof bodyFromLocal === 'string') ? bodyFromLocal : (value.body || ''),
         });
@@ -49,6 +50,8 @@ async function setRule(rule) {
     pattern: rule.pattern,
     enabled: rule.enabled !== false, // default to true when unset
     bodyType: rule.bodyType,
+    statusCode: rule.statusCode || 200,
+    statusText: rule.statusText || '',
   };
   const bodyKey = `rr_body_${rule.id}`;
   const bodyValue = rule.body ?? '';
@@ -67,6 +70,8 @@ async function setRuleMeta(rule) {
     pattern: rule.pattern,
     enabled: rule.enabled !== false, // default to true when unset
     bodyType: rule.bodyType,
+    statusCode: rule.statusCode || 200,
+    statusText: rule.statusText || '',
   };
   await chrome.storage.sync.set({ [metaKey]: metaValue });
 }
@@ -183,6 +188,22 @@ function render(rules, hits) {
           <option value="json" ${rule.bodyType === 'json' ? 'selected' : ''}>JSON</option>
         </select>
       </div>
+      <div class="row mb-2 flex gap-2">
+        <select class="statusCode select w-1/3" aria-label="Status code">
+          <option value="200" ${rule.statusCode === 200 ? 'selected' : ''}>200 OK</option>
+          <option value="201" ${rule.statusCode === 201 ? 'selected' : ''}>201 Created</option>
+          <option value="204" ${rule.statusCode === 204 ? 'selected' : ''}>204 No Content</option>
+          <option value="400" ${rule.statusCode === 400 ? 'selected' : ''}>400 Bad Request</option>
+          <option value="401" ${rule.statusCode === 401 ? 'selected' : ''}>401 Unauthorized</option>
+          <option value="403" ${rule.statusCode === 403 ? 'selected' : ''}>403 Forbidden</option>
+          <option value="404" ${rule.statusCode === 404 ? 'selected' : ''}>404 Not Found</option>
+          <option value="422" ${rule.statusCode === 422 ? 'selected' : ''}>422 Unprocessable Entity</option>
+          <option value="500" ${rule.statusCode === 500 ? 'selected' : ''}>500 Internal Server Error</option>
+          <option value="502" ${rule.statusCode === 502 ? 'selected' : ''}>502 Bad Gateway</option>
+          <option value="503" ${rule.statusCode === 503 ? 'selected' : ''}>503 Service Unavailable</option>
+        </select>
+        <input class="statusText input w-2/3" placeholder="Status text (optional)" value="${escapeHtml(rule.statusText || '')}" aria-label="Status text" />
+      </div>
       <div class="row mb-2">
         <textarea class="body textarea" placeholder="Replacement body" aria-label="Replacement body">${escapeHtml(rule.body)}</textarea>
         <div class="validation text-xs text-red-600 mt-1 hidden" data-error="json" role="alert"></div>
@@ -199,6 +220,8 @@ function render(rules, hits) {
     const matchTypeEl = content.querySelector('.matchType');
     const patternEl = content.querySelector('.pattern');
     const bodyTypeEl = content.querySelector('.bodyType');
+    const statusCodeEl = content.querySelector('.statusCode');
+    const statusTextEl = content.querySelector('.statusText');
     const bodyEl = content.querySelector('.body');
     const deleteBtn = content.querySelector('.delete');
 
@@ -221,6 +244,16 @@ function render(rules, hits) {
       rule.pattern = patternEl.value;
       setRuleMeta(rule);
       flashStatus('Pattern saved', 'success');
+    });
+    statusCodeEl.addEventListener('change', () => {
+      rule.statusCode = parseInt(statusCodeEl.value, 10);
+      setRuleMeta(rule);
+      flashStatus('Status code updated', 'success');
+    });
+    statusTextEl.addEventListener('input', () => {
+      rule.statusText = statusTextEl.value;
+      setRuleMeta(rule);
+      flashStatus('Status text updated', 'success');
     });
     const enabledToggle = content.querySelector('.enabled-toggle');
     enabledToggle.addEventListener('change', () => {
@@ -334,7 +367,7 @@ function escapeHtml(str) {
 }
 
 document.getElementById('addRule').addEventListener('click', async () => {
-  const newRule = { id: uid(), name: '', matchType: 'substring', pattern: '', enabled: true, bodyType: 'text', body: '' };
+  const newRule = { id: uid(), name: '', matchType: 'substring', pattern: '', enabled: true, bodyType: 'text', statusCode: 200, statusText: 'OK', body: '' };
   await setRule(newRule);
   await refresh();
 });
@@ -350,12 +383,6 @@ document.getElementById('openOptions').addEventListener('click', async () => {
   }
 });
 
-// document.getElementById('saveRules').addEventListener('click', async () => {
-//   // This button is now redundant, but we'll keep the handler for now
-//   // to avoid breaking anything before we remove the button from popup.html
-//   // In practice, changes are saved automatically.
-// });
-
 document.getElementById('clearHits').addEventListener('click', async () => {
   const tabId = await getActiveTabId();
   if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
@@ -364,26 +391,7 @@ document.getElementById('clearHits').addEventListener('click', async () => {
   await refresh();
 });
 
-// These functions are no longer needed as rules are saved on change.
-/*
-async function collectRulesFromDOM() {
-  const containers = Array.from(document.querySelectorAll('.rule'));
-  return containers.map((div) => {
-    return {
-      id: div.__ruleId || uid(),
-      matchType: div.querySelector('.matchType').value,
-      pattern: div.querySelector('.pattern').value,
-      bodyType: div.querySelector('.bodyType').value,
-      body: div.querySelector('.body').value,
-    };
-  });
-}
 
-async function saveRules() {
-  const rules = await collectRulesFromDOM();
-  await setRules(rules);
-}
-*/
 
 async function refresh() {
   try {

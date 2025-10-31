@@ -28,6 +28,8 @@ async function getRules() {
           pattern: value.pattern || '',
           enabled: value.enabled !== false, // default to true when unset
           bodyType: value.bodyType || 'text',
+          statusCode: value.statusCode || 200, // default to 200 when unset
+          statusText: value.statusText || '', // default to empty string
           // Prefer body from local storage; fall back to any legacy body in sync
           body: (typeof bodyFromLocal === 'string') ? bodyFromLocal : (value.body || ''),
         });
@@ -49,6 +51,8 @@ async function setRule(rule) {
     pattern: rule.pattern,
     enabled: rule.enabled !== false, // default to true when unset
     bodyType: rule.bodyType,
+    statusCode: rule.statusCode || 200,
+    statusText: rule.statusText || '',
   };
   const bodyKey = `rr_body_${rule.id}`;
   const bodyValue = rule.body ?? '';
@@ -67,6 +71,8 @@ async function setRuleMeta(rule) {
     pattern: rule.pattern,
     enabled: rule.enabled !== false, // default to true when unset
     bodyType: rule.bodyType,
+    statusCode: rule.statusCode || 200,
+    statusText: rule.statusText || '',
   };
   await chrome.storage.sync.set({ [metaKey]: metaValue });
 }
@@ -237,6 +243,28 @@ function renderRuleDetails(rule) {
             <option value="json" ${rule.bodyType === 'json' ? 'selected' : ''}>JSON</option>
           </select>
         </div>
+        
+        <div>
+          <label class="label block mb-1">Status Code</label>
+          <select class="statusCode select w-full" aria-label="Status code">
+            <option value="200" ${rule.statusCode === 200 ? 'selected' : ''}>200 OK</option>
+            <option value="201" ${rule.statusCode === 201 ? 'selected' : ''}>201 Created</option>
+            <option value="204" ${rule.statusCode === 204 ? 'selected' : ''}>204 No Content</option>
+            <option value="400" ${rule.statusCode === 400 ? 'selected' : ''}>400 Bad Request</option>
+            <option value="401" ${rule.statusCode === 401 ? 'selected' : ''}>401 Unauthorized</option>
+            <option value="403" ${rule.statusCode === 403 ? 'selected' : ''}>403 Forbidden</option>
+            <option value="404" ${rule.statusCode === 404 ? 'selected' : ''}>404 Not Found</option>
+            <option value="422" ${rule.statusCode === 422 ? 'selected' : ''}>422 Unprocessable Entity</option>
+            <option value="500" ${rule.statusCode === 500 ? 'selected' : ''}>500 Internal Server Error</option>
+            <option value="502" ${rule.statusCode === 502 ? 'selected' : ''}>502 Bad Gateway</option>
+            <option value="503" ${rule.statusCode === 503 ? 'selected' : ''}>503 Service Unavailable</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="label block mb-1">Status Text</label>
+          <input class="statusText input w-full" placeholder="Status text (optional)" value="${escapeHtml(rule.statusText || '')}" aria-label="Status text" />
+        </div>
       </div>
       
       <div>
@@ -252,6 +280,8 @@ function renderRuleDetails(rule) {
   const matchTypeEl = detailsContainer.querySelector('.matchType');
   const patternEl = detailsContainer.querySelector('.pattern');
   const bodyTypeEl = detailsContainer.querySelector('.bodyType');
+  const statusCodeEl = detailsContainer.querySelector('.statusCode');
+  const statusTextEl = detailsContainer.querySelector('.statusText');
   const bodyEl = detailsContainer.querySelector('.body');
   const enabledToggle = detailsContainer.querySelector('.enabled-toggle');
 
@@ -272,6 +302,18 @@ function renderRuleDetails(rule) {
     rule.pattern = patternEl.value;
     await setRuleMeta(rule);
     flashStatus('Pattern saved', 'success');
+  });
+
+  statusCodeEl.addEventListener('change', async () => {
+    rule.statusCode = parseInt(statusCodeEl.value, 10);
+    await setRuleMeta(rule);
+    flashStatus('Status code updated', 'success');
+  });
+
+  statusTextEl.addEventListener('input', async () => {
+    rule.statusText = statusTextEl.value;
+    await setRuleMeta(rule);
+    flashStatus('Status text updated', 'success');
   });
 
   enabledToggle.addEventListener('change', async () => {
@@ -318,7 +360,7 @@ function renderRuleDetails(rule) {
 }
 
 document.getElementById('addRule').addEventListener('click', async () => {
-  const newRule = { id: uid(), name: '', matchType: 'substring', pattern: '', enabled: true, bodyType: 'text', body: '' };
+  const newRule = { id: uid(), name: '', matchType: 'substring', pattern: '', enabled: true, bodyType: 'text', statusCode: 200, statusText: 'OK', body: '' };
   await setRule(newRule);
   await refresh();
   // Automatically select the new rule
@@ -337,6 +379,8 @@ document.getElementById('exportRules').addEventListener('click', async () => {
     pattern: rule.pattern,
     enabled: rule.enabled,
     bodyType: rule.bodyType,
+    statusCode: rule.statusCode,
+    statusText: rule.statusText,
     body: rule.body
   }));
 
@@ -391,6 +435,10 @@ document.getElementById('confirmImport').addEventListener('click', async () => {
 
     // Add the imported rules
     for (const rule of importedRules) {
+      // Ensure default status code and text if not present in import
+      if (rule.statusCode === undefined) rule.statusCode = 200;
+      if (rule.statusText === undefined) rule.statusText = 'OK';
+      
       // If rule already exists, update it; otherwise, create a new one
       await setRule(rule);
     }

@@ -64,7 +64,26 @@
   function buildResponse(rule, url) {
     const headers = new Headers({ 'Content-Type': rule.bodyType === 'json' ? 'application/json' : 'text/plain' });
     const body = rule.bodyType === 'json' ? JSON.stringify(safeParseJSON(rule.body)) : String(rule.body ?? '');
-    return new Response(body, { status: 200, statusText: 'OK', headers, url });
+    const statusCode = rule.statusCode || 200;
+    const statusText = rule.statusText || getStatusCodeText(statusCode);
+    return new Response(body, { status: statusCode, statusText: statusText, headers, url });
+  }
+
+  function getStatusCodeText(statusCode) {
+    const statusTexts = {
+      200: 'OK',
+      201: 'Created',
+      204: 'No Content',
+      400: 'Bad Request',
+      401: 'Unauthorized',
+      403: 'Forbidden',
+      404: 'Not Found',
+      422: 'Unprocessable Entity',
+      500: 'Internal Server Error',
+      502: 'Bad Gateway',
+      503: 'Service Unavailable'
+    };
+    return statusTexts[statusCode] || 'OK';
   }
 
   function safeParseJSON(text) {
@@ -121,13 +140,15 @@
       if (rule) {
         notifyRuleHit(rule.id, absUrl);
         const responseText = rule.bodyType === 'json' ? JSON.stringify(safeParseJSON(rule.body)) : String(rule.body ?? '');
+        const statusCode = rule.statusCode || 200;
+        const statusText = rule.statusText || getStatusCodeText(statusCode);
         const _dispatch = this.dispatchEvent.bind(this);
 
         // Simulate readyState changes and set response fields
         setTimeout(() => {
           try { Object.defineProperty(this, 'readyState', { value: 4, configurable: true }); } catch {}
-          try { Object.defineProperty(this, 'status', { value: 200, configurable: true }); } catch {}
-          try { Object.defineProperty(this, 'statusText', { value: 'OK', configurable: true }); } catch {}
+          try { Object.defineProperty(this, 'status', { value: statusCode, configurable: true }); } catch {}
+          try { Object.defineProperty(this, 'statusText', { value: statusText, configurable: true }); } catch {}
           try { Object.defineProperty(this, 'responseURL', { value: absUrl, configurable: true }); } catch {}
           try { Object.defineProperty(this, 'response', { value: responseText, configurable: true }); } catch {}
           try { Object.defineProperty(this, 'responseText', { value: responseText, configurable: true }); } catch {}
