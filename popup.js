@@ -221,4 +221,68 @@ async function refresh() {
   }
 }
 
+// Toggle: enable/disable data processing rules
+(function initToggle() {
+  const btn = document.getElementById('toggleRules');
+  const statusEl = document.getElementById('statusMessage');
+  if (!btn) return;
+
+  function showStatus(message) {
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+  }
+
+  async function getEnabled() {
+    if (!window.chrome || !chrome.storage || !chrome.storage.sync) return true;
+    const { rr_enabled } = await chrome.storage.sync.get('rr_enabled');
+    return rr_enabled !== false; // default to true when unset
+  }
+
+  async function setEnabled(enabled) {
+    if (window.chrome && chrome.storage && chrome.storage.sync) {
+      await chrome.storage.sync.set({ rr_enabled: !!enabled });
+    }
+    try {
+      console.log('Rules enabled state changed:', !!enabled);
+    } catch {}
+  }
+
+  function updateButtonUI(enabled) {
+    const isOn = !!enabled;
+    btn.classList.toggle('on', isOn);
+    btn.classList.toggle('off', !isOn);
+    btn.setAttribute('aria-checked', String(isOn));
+    btn.textContent = isOn ? 'Disable Rules' : 'Enable Rules';
+  }
+
+  async function applyInitial() {
+    const enabled = await getEnabled();
+    updateButtonUI(enabled);
+  }
+
+  btn.addEventListener('click', async () => {
+    const currentlyEnabled = btn.classList.contains('on');
+    if (currentlyEnabled) {
+      const ok = confirm('Disabling rules may allow real responses through and could cause data discrepancies. Continue?');
+      if (!ok) {
+        return; // abort change
+      }
+    }
+    const next = !currentlyEnabled;
+    await setEnabled(next);
+    updateButtonUI(next);
+    showStatus(next ? 'Rules enabled' : 'Rules disabled');
+  });
+
+  btn.addEventListener('keydown', async (ev) => {
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      ev.preventDefault();
+      btn.click();
+    }
+  });
+
+  applyInitial();
+})();
+
 refresh();

@@ -65,6 +65,14 @@ async function loadRules() {
     chrome.storage.sync.get(null),
     chrome.storage.local.get(null),
   ]);
+  const enabled = metaItems?.rr_enabled !== false; // default true when unset
+  if (!enabled) {
+    try {
+      console.log('Response Replacer: rules disabled');
+    } catch {}
+    try { sendRulesToPage([]); } catch {}
+    return [];
+  }
   const rules = [];
   for (const key in metaItems) {
     if (key.startsWith('rr_rule_')) {
@@ -84,7 +92,10 @@ async function loadRules() {
     }
   }
   // Send to page
-  try { sendRulesToPage(rules); } catch {}
+  try {
+    sendRulesToPage(rules);
+    console.log('Response Replacer: rules enabled; sending', rules.length, 'rules');
+  } catch {}
   return rules;
 }
 
