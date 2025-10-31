@@ -339,6 +339,17 @@ document.getElementById('addRule').addEventListener('click', async () => {
   await refresh();
 });
 
+document.getElementById('openOptions').addEventListener('click', async () => {
+  if (window.chrome && chrome.runtime && chrome.runtime.openOptionsPage) {
+    chrome.runtime.openOptionsPage();
+  } else {
+    // Fallback: open in a new tab
+    const url = chrome.runtime.getURL('options.html');
+    const tab = await chrome.tabs.create({ url });
+    console.log('FastMock: opened options page in tab', tab.id);
+  }
+});
+
 // document.getElementById('saveRules').addEventListener('click', async () => {
 //   // This button is now redundant, but we'll keep the handler for now
 //   // to avoid breaking anything before we remove the button from popup.html
