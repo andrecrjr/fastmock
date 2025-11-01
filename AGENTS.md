@@ -4,6 +4,8 @@
 
 FastMock is a Chrome extension implementing client-side request interception through monkeypatching of global web APIs. The system intercepts `fetch()` and `XMLHttpRequest` calls within the page context and returns user-defined mock responses. The extension operates at the page level rather than network level, ensuring all interception occurs within the DOM context of the target page.
 
+The options page implements a modern modular architecture using ES6 modules (type="module") to improve code organization, maintainability, and development workflow.
+
 ## Component Architecture
 
 ### Core Components
@@ -14,6 +16,13 @@ FastMock is a Chrome extension implementing client-side request interception thr
 4. **injected.js** - Executes in page context with DOM access, implements request interception mechanisms
 5. **popup.html/popup.js** - Frontend interface for rule management and hit monitoring
 6. **tailwind-v4.js** - Embedded CSS framework for UI rendering
+7. **src/optionsPage/** - Modular options page implementation with the following modules:
+   - **main.js** - Entry point for the options page application using ES6 modules
+   - **storage.js** - Handles all Chrome storage operations (getRules, setRule, etc.)
+   - **ui.js** - Manages UI rendering functions (renderRulesList, renderRuleDetails, etc.)
+   - **ruleManager.js** - Handles rule and group management, selection logic
+   - **state.js** - Centralized state management for the options page
+   - **utils.js** - Shared utility functions (uid, isValidJSON, escapeHtml, flashStatus)
 
 ### Component Interaction Flow
 
@@ -30,6 +39,24 @@ FastMock is a Chrome extension implementing client-side request interception thr
     ↓ (Response Mocking)
 [Background (Hit Tracking)]
 ```
+
+## Modular Architecture
+
+The options page implements a modular architecture using ES6 modules with `type="module"`:
+
+### Module Structure
+- **Main Module**: `src/optionsPage/main.js` - Initializes the application and sets up event listeners
+- **Storage Module**: `src/optionsPage/storage.js` - Handles all Chrome storage operations
+- **UI Module**: `src/optionsPage/ui.js` - Contains rendering functions for the UI
+- **Rule Manager Module**: `src/optionsPage/ruleManager.js` - Manages rule logic and selection
+- **State Module**: `src/optionsPage/state.js` - Centralized state management
+- **Utils Module**: `src/optionsPage/utils.js` - Shared utility functions
+
+### Benefits
+- Improved maintainability through separation of concerns
+- Better code organization with clear module responsibilities
+- Enhanced testability with isolated modules
+- Easier debugging with modular boundaries
 
 ## Request Interception Implementation
 

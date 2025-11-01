@@ -6,7 +6,9 @@
     <script src="tailwind-v4.js"></script>
     <!-- Tailwind v4 runtime compiles this style block -->
     <style type="text/tailwindcss">
-      @import "tailwindcss";
+      @theme {
+        /* Default Tailwind theme */
+      }
 
       /* Design system tokens: colors, spacing, radii, shadows */
       @layer components {
@@ -140,6 +142,6 @@
       </div>
     </div>
 
-    <script src="options.js"></script>
+    <script type="module" src="src/optionsPage/main.js"></script>
   </body>
 </html>
