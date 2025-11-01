@@ -23,10 +23,9 @@ async function getRules() {
           matchType: value.matchType || 'substring',
           pattern: value.pattern || '',
           enabled: value.enabled !== false, // default to true when unset
-          bodyType: value.bodyType || 'text',
+          bodyType: value.bodyType || 'json',
           group: value.group || '', // default to no group
           statusCode: value.statusCode || 200, // default to 200 when unset
-          statusText: value.statusText || '', // default to empty string
           // Prefer body from local storage; fall back to any legacy body in sync
           body: (typeof bodyFromLocal === 'string') ? bodyFromLocal : (value.body || ''),
         });
@@ -73,7 +72,6 @@ async function setRule(rule) {
     bodyType: rule.bodyType,
     group: rule.group || '', // Save group association
     statusCode: rule.statusCode || 200,
-    statusText: rule.statusText || '',
   };
   const bodyKey = `rr_body_${rule.id}`;
   const bodyValue = rule.body ?? '';
@@ -94,7 +92,6 @@ async function setRuleMeta(rule) {
     bodyType: rule.bodyType,
     group: rule.group || '', // Save group association
     statusCode: rule.statusCode || 200,
-    statusText: rule.statusText || '',
   };
   await chrome.storage.sync.set({ [metaKey]: metaValue });
 }

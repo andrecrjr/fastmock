@@ -51,7 +51,6 @@ async function setRule(rule) {
     enabled: rule.enabled !== false, // default to true when unset
     bodyType: rule.bodyType,
     statusCode: rule.statusCode || 200,
-    statusText: rule.statusText || '',
   };
   const bodyKey = `rr_body_${rule.id}`;
   const bodyValue = rule.body ?? '';
@@ -71,7 +70,6 @@ async function setRuleMeta(rule) {
     enabled: rule.enabled !== false, // default to true when unset
     bodyType: rule.bodyType,
     statusCode: rule.statusCode || 200,
-    statusText: rule.statusText || '',
   };
   await chrome.storage.sync.set({ [metaKey]: metaValue });
 }
@@ -243,7 +241,7 @@ function render(rules, hits) {
           <option value="502" ${rule.statusCode === 502 ? 'selected' : ''}>502 Bad Gateway</option>
           <option value="503" ${rule.statusCode === 503 ? 'selected' : ''}>503 Service Unavailable</option>
         </select>
-        <input class="statusText input w-2/3" placeholder="Status text (optional)" value="${escapeHtml(rule.statusText || '')}" aria-label="Status text" />
+
       </div>
       <div class="row mb-2">
         <textarea class="body textarea" placeholder="Replacement body" aria-label="Replacement body">${escapeHtml(rule.body)}</textarea>
@@ -299,11 +297,6 @@ function render(rules, hits) {
       rule.statusCode = parseInt(statusCodeEl.value, 10);
       setRuleMeta(rule);
       flashStatus('Status code updated', 'success');
-    });
-    statusTextEl.addEventListener('input', () => {
-      rule.statusText = statusTextEl.value;
-      setRuleMeta(rule);
-      flashStatus('Status text updated', 'success');
     });
     const enabledToggle = content.querySelector('.enabled-toggle');
     enabledToggle.addEventListener('change', () => {
@@ -395,7 +388,6 @@ function render(rules, hits) {
         enabled: rule.enabled,
         bodyType: rule.bodyType,
         statusCode: rule.statusCode,
-        statusText: rule.statusText,
         body: rule.body
       };
       
@@ -523,7 +515,7 @@ function escapeHtml(str) {
 }
 
 document.getElementById('addRule').addEventListener('click', async () => {
-  const newRule = { id: uid(), name: '', matchType: 'substring', pattern: '', enabled: true, bodyType: 'text', statusCode: 200, statusText: 'OK', body: '' };
+  const newRule = { id: uid(), name: '', matchType: 'exact', pattern: '', enabled: true, bodyType: 'json', statusCode: 200, body: '' };
   await setRule(newRule);
   await refresh();
 });

@@ -60,7 +60,7 @@ async function refresh() {
 
 // Add rule and group functions
 async function addRule() {
-  const newRule = { id: uid(), name: '', matchType: 'substring', pattern: '', enabled: true, bodyType: 'text', group: '', statusCode: 200, statusText: 'OK', body: '' };
+  const newRule = { id: uid(), name: '', matchType: 'exact', pattern: '', enabled: true, bodyType: 'json', group: '', statusCode: 200, body: '' };
   await setRule(newRule);
   await refresh();
   // Automatically select the new rule
@@ -113,7 +113,6 @@ async function exportRules() {
     bodyType: rule.bodyType,
     group: rule.group, // Include group information
     statusCode: rule.statusCode,
-    statusText: rule.statusText,
     body: rule.body
   }));
   
@@ -184,9 +183,8 @@ async function importRules(importText) {
         throw new Error(`Invalid rule structure: ${JSON.stringify(rule)}`);
       }
       
-      // Ensure default status code and text if not present in import
+      // Ensure default status code if not present in import
       if (rule.statusCode === undefined) rule.statusCode = 200;
-      if (rule.statusText === undefined) rule.statusText = 'OK';
       
       // If rule already exists, update it; otherwise, create a new one
       await setRule(rule);

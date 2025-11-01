@@ -65,7 +65,7 @@
     const headers = new Headers({ 'Content-Type': rule.bodyType === 'json' ? 'application/json' : 'text/plain' });
     const body = rule.bodyType === 'json' ? JSON.stringify(safeParseJSON(rule.body)) : String(rule.body ?? '');
     const statusCode = rule.statusCode || 200;
-    const statusText = rule.statusText || getStatusCodeText(statusCode);
+    const statusText = getStatusCodeText(statusCode);
     return new Response(body, { status: statusCode, statusText: statusText, headers, url });
   }
 
@@ -141,7 +141,7 @@
         notifyRuleHit(rule.id, absUrl);
         const responseText = rule.bodyType === 'json' ? JSON.stringify(safeParseJSON(rule.body)) : String(rule.body ?? '');
         const statusCode = rule.statusCode || 200;
-        const statusText = rule.statusText || getStatusCodeText(statusCode);
+        const statusText = getStatusCodeText(statusCode);
         const _dispatch = this.dispatchEvent.bind(this);
 
         // Simulate readyState changes and set response fields

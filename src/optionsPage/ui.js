@@ -284,10 +284,7 @@ function renderRuleDetails(rule) {
           </select>
         </div>
         
-        <div>
-          <label class="label block mb-1">Status Text</label>
-          <input class="statusText input w-full" placeholder="Status text (optional)" value="${escapeHtml(rule.statusText || '')}" aria-label="Status text" />
-        </div>
+
       </div>
       
       <div>
@@ -305,7 +302,6 @@ function renderRuleDetails(rule) {
   const patternEl = detailsContainer.querySelector('.pattern');
   const bodyTypeEl = detailsContainer.querySelector('.bodyType');
   const statusCodeEl = detailsContainer.querySelector('.statusCode');
-  const statusTextEl = detailsContainer.querySelector('.statusText');
   const bodyEl = detailsContainer.querySelector('.body');
   const enabledToggle = detailsContainer.querySelector('.enabled-toggle');
 
@@ -339,12 +335,6 @@ function renderRuleDetails(rule) {
     rule.statusCode = parseInt(statusCodeEl.value, 10);
     await setRuleMeta(rule);
     flashStatus('Status code updated', 'success');
-  });
-
-  statusTextEl.addEventListener('input', async () => {
-    rule.statusText = statusTextEl.value;
-    await setRuleMeta(rule);
-    flashStatus('Status text updated', 'success');
   });
 
   enabledToggle.addEventListener('change', async () => {
