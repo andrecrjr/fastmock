@@ -396,7 +396,7 @@ function render(rules, hits) {
       
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', `fastmock-rule-${rule.name || 'untitled'}.json`);
+      linkElement.setAttribute('download', `mockzilla-rule-${rule.name || 'untitled'}.json`);
       linkElement.click();
       flashStatus('Rule exported', 'success');
     });
@@ -527,7 +527,7 @@ document.getElementById('openOptions').addEventListener('click', async () => {
     // Fallback: open in a new tab
     const url = chrome.runtime.getURL('options.html');
     const tab = await chrome.tabs.create({ url });
-    console.log('FastMock: opened options page in tab', tab.id);
+    console.log('Mockzilla: opened options page in tab', tab.id);
   }
 });
 

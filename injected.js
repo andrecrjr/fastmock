@@ -3,7 +3,7 @@
 // { id: string, pattern: string, matchType: 'substring' | 'exact', bodyType: 'text' | 'json', body: string }
 
 (function () {
-  console.log('FastMock RR injected script running');
+  console.log('Mockzilla RR injected script running');
   const RR_NS = '__RR__';
   const state = {
     rules: [],

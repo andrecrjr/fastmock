@@ -1,8 +1,8 @@
-# FastMock Chrome Extension - Technical Architecture
+# Mockzilla Chrome Extension - Technical Architecture
 
 ## System Overview
 
-FastMock is a Chrome extension implementing client-side request interception through monkeypatching of global web APIs. The system intercepts `fetch()` and `XMLHttpRequest` calls within the page context and returns user-defined mock responses. The extension operates at the page level rather than network level, ensuring all interception occurs within the DOM context of the target page.
+Mockzilla is a Chrome extension implementing client-side request interception through monkeypatching of global web APIs. The system intercepts `fetch()` and `XMLHttpRequest` calls within the page context and returns user-defined mock responses. The extension operates at the page level rather than network level, ensuring all interception occurs within the DOM context of the target page.
 
 The options page implements a modern modular architecture using ES6 modules (type="module") to improve code organization, maintainability, and development workflow.
 
@@ -192,6 +192,6 @@ function createMockResponse(rule) {
 - Pattern match logging for debugging
 
 ### Developer Tools Integration
-- Console messages identify FastMock origin
+- Console messages identify Mockzilla origin
 - Network tab shows mock responses with distinguishing headers
 - Extension popup displays hit statistics per tab

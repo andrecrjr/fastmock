@@ -25,7 +25,7 @@ function isInjected() {
     // Remove the tag only after it loads to avoid cancelling execution
     script.addEventListener('load', () => {
       try {
-        console.log('FastMock: injected.js loaded');
+        console.log('Mockzilla: injected.js loaded');
         script.remove();
       } catch {}
     });
@@ -37,19 +37,19 @@ function isInjected() {
         try {
           const resp = await chrome.runtime.sendMessage({ type: 'INJECT_MAIN_WORLD' });
           if (!resp || !resp.ok) {
-            console.warn('FastMock: background MAIN-world injection failed', resp?.error);
+            console.warn('Mockzilla: background MAIN-world injection failed', resp?.error);
           } else {
-            console.log('FastMock: background MAIN-world injection succeeded');
+            console.log('Mockzilla: background MAIN-world injection succeeded');
           }
         } catch (err) {
-          console.warn('FastMock: failed to request MAIN-world injection', err);
+          console.warn('Mockzilla: failed to request MAIN-world injection', err);
         }
       }
       // Send rules once injection is likely in place
       try { await loadRules(); } catch {}
     }, 50);
   } catch (e) {
-    console.warn('FastMock: failed to inject', e);
+    console.warn('Mockzilla: failed to inject', e);
   }
 })();
 
@@ -91,7 +91,7 @@ async function loadRules() {
   // Send to page
   try {
     sendRulesToPage(rules);
-    console.log('FastMock: global enabled:', globalEnabled, 'sending', rules.length, 'rules');
+    console.log('Mockzilla: global enabled:', globalEnabled, 'sending', rules.length, 'rules');
   } catch {}
   return rules;
 }

@@ -125,7 +125,7 @@ async function exportRules() {
   const dataStr = JSON.stringify({ rules: rulesForExport, groups: groupsForExport }, null, 2);
   const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
 
-  const exportFileDefaultName = 'fastmock-rules-export.json';
+  const exportFileDefaultName = 'mockzilla-rules-export.json';
 
   const linkElement = document.createElement('a');
   linkElement.setAttribute('href', dataUri);

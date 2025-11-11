@@ -1,6 +1,6 @@
-# FastMock
+# Mockzilla
 
-FastMock is a Chrome extension that intercepts page-level `fetch` and `XMLHttpRequest` calls and returns mocked responses based on rules you define. It’s ideal for prototyping, isolating frontend work from unstable APIs, and reproducing edge cases without changing backend services.
+Mockzilla is a Chrome extension that intercepts page-level `fetch` and `XMLHttpRequest` calls and returns mocked responses based on rules you define. It’s ideal for prototyping, isolating frontend work from unstable APIs, and reproducing edge cases without changing backend services.
 
 ## Overview
 - Intercepts requests initiated from the page context (not network-wide).
@@ -18,7 +18,7 @@ FastMock is a Chrome extension that intercepts page-level `fetch` and `XMLHttpRe
 
 ## Installation
 - Enable Developer Mode in Chrome (`chrome://extensions/`).
-- Click `Load unpacked` and select the project folder: `fastmock`.
+- Click `Load unpacked` and select the project folder: `mockzilla`.
 - The extension icon will appear; open the popup to start adding rules.
 
 ## Usage
@@ -111,7 +111,7 @@ FastMock is a Chrome extension that intercepts page-level `fetch` and `XMLHttpRe
 - Mocks not applying:
   - Confirm the pattern matches the request URL; try `substring` first.
   - Ensure the page initiates the request via `fetch`/`XHR` (service worker or extension requests aren’t intercepted).
-  - Check console logs: look for "FastMock: injected.js loaded" and any warnings.
+  - Check console logs: look for "Mockzilla: injected.js loaded" and any warnings.
 - JSON body not returning as expected:
   - Validate the JSON; invalid JSON is returned as a string.
 - No hits recorded:
