@@ -24,6 +24,12 @@ async function refresh() {
     window.currentRules = rules; // Store for later use
     window.currentGroups = groups; // Store groups for later use
     
+    // Update folders count pill if present
+    const countEl = document.getElementById('groupsCount');
+    if (countEl) {
+      countEl.textContent = `${groups.length} ${groups.length === 1 ? 'folder' : 'folders'}`;
+    }
+
     renderRulesList(rules, groups);
     
     // Update the selected item in the details panel if it was previously selected
@@ -103,6 +109,7 @@ function collapseAll() {
 async function exportRules() {
   const rules = await getRules();
   const groups = await getGroups();
+  const exportedAt = new Date().toISOString();
   // Create a minimal representation that excludes internal properties
   const rulesForExport = rules.map(rule => ({
     id: rule.id,
@@ -122,10 +129,19 @@ async function exportRules() {
     description: group.description
   }));
 
-  const dataStr = JSON.stringify({ rules: rulesForExport, groups: groupsForExport }, null, 2);
+  const dataStr = JSON.stringify({ exportedAt, rules: rulesForExport, groups: groupsForExport }, null, 2);
   const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
 
-  const exportFileDefaultName = 'mockzilla-rules-export.json';
+  // Include current date in the filename for clarity
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const hh = String(now.getHours()).padStart(2, '0');
+  const min = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  const stamp = `${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}`;
+  const exportFileDefaultName = `mockzilla-rules-export_${stamp}.json`;
 
   const linkElement = document.createElement('a');
   linkElement.setAttribute('href', dataUri);

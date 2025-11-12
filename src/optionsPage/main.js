@@ -2,13 +2,16 @@
 
 import { addRule, addGroup, expandAll, collapseAll, exportRules, importRules, refresh } from './ruleManager.js';
 import { setEnabled, getEnabled } from './storage.js';
-import { flashStatus } from './utils.js';
+import { flashStatus, debounce } from './utils.js';
+import { getTheme, setTheme, getDensity, setDensity, setSearchQuery, setSortOrder, setFilterStatus, setShowUngrouped, applyPrefsToDOM, getSearchQuery, getFilterStatus, getShowUngrouped } from './state.js';
 
 // Initialize the page when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
   await refresh();
   initializeEventListeners();
   initializeToggleRuleButton();
+  initializeHeaderControls();
+  applyPrefsToDOM();
 });
 
 function initializeEventListeners() {
@@ -50,11 +53,19 @@ function initializeEventListeners() {
   document.getElementById('exportRules').addEventListener('click', async () => {
     await exportRules();
   });
+  const exportIcon = document.getElementById('exportIconBtn');
+  if (exportIcon) {
+    exportIcon.addEventListener('click', async () => { await exportRules(); });
+  }
 
   // Import rules functionality
   document.getElementById('importRules').addEventListener('click', () => {
     document.getElementById('importModal').classList.remove('hidden');
   });
+  const importIcon = document.getElementById('importIconBtn');
+  if (importIcon) {
+    importIcon.addEventListener('click', () => { document.getElementById('importModal').classList.remove('hidden'); });
+  }
 
   document.getElementById('cancelImport').addEventListener('click', () => {
     document.getElementById('importModal').classList.add('hidden');
@@ -67,6 +78,18 @@ function initializeEventListeners() {
     document.getElementById('importModal').classList.add('hidden');
     document.getElementById('importTextarea').value = '';
   });
+
+  // Quick create folder card
+  const quickCreateBtn = document.getElementById('quickCreateGroup');
+  if (quickCreateBtn) {
+    quickCreateBtn.addEventListener('click', async () => {
+      const input = document.getElementById('quickGroupName');
+      const name = (input?.value || '').trim();
+      if (!name) { flashStatus('Folder name is required', 'error'); return; }
+      await addGroup(name, '');
+      if (input) input.value = '';
+    });
+  }
 }
 
 function initializeToggleRuleButton() {
@@ -119,4 +142,102 @@ function initializeToggleRuleButton() {
   });
 
   applyInitial();
+}
+
+function initializeHeaderControls() {
+  // Theme toggle
+  const themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) {
+    themeToggle.checked = getTheme() === 'dark';
+    themeToggle.addEventListener('change', () => {
+      setTheme(themeToggle.checked ? 'dark' : 'light');
+    });
+  }
+  const settingsBtn = document.getElementById('settingsBtn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => {
+      const next = getTheme() === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+      if (themeToggle) themeToggle.checked = next === 'dark';
+      flashStatus(`Theme: ${next}`, 'info');
+    });
+  }
+
+  // Density
+  const densityToggle = document.getElementById('densityToggle');
+  if (densityToggle) {
+    densityToggle.value = getDensity();
+    densityToggle.addEventListener('change', () => {
+      setDensity(densityToggle.value);
+      // re-render to apply spacing changes
+      refresh();
+    });
+  }
+
+  // Search
+  const searchInput = document.getElementById('globalSearch');
+  if (searchInput) {
+    searchInput.value = getSearchQuery() || '';
+    const onSearch = debounce(() => { setSearchQuery(searchInput.value); refresh(); }, 250);
+    searchInput.addEventListener('input', onSearch);
+  }
+
+  // Sorting
+  const sortSelect = document.getElementById('sortSelect');
+  if (sortSelect) {
+    sortSelect.addEventListener('change', () => { setSortOrder(sortSelect.value); refresh(); });
+  }
+
+  // Filters
+  const filterAll = document.getElementById('filterAll');
+  const filterEnabled = document.getElementById('filterEnabled');
+  const filterDisabled = document.getElementById('filterDisabled');
+  const filterUngrouped = document.getElementById('filterUngrouped');
+  // Centralized, theme-aware chip active toggle using CSS class defined in options.html
+  function setFilterChipActive(activeEl) {
+    [filterAll, filterEnabled, filterDisabled].forEach(el => {
+      if (!el) return;
+      const isActive = el === activeEl;
+      el.classList.toggle('chip-active', isActive);
+    });
+  }
+  // Initialize chip state
+  const currentStatus = getFilterStatus && getFilterStatus();
+  if (typeof currentStatus === 'string') {
+    if (currentStatus === 'all' && filterAll) setFilterChipActive(filterAll);
+    if (currentStatus === 'enabled' && filterEnabled) setFilterChipActive(filterEnabled);
+    if (currentStatus === 'disabled' && filterDisabled) setFilterChipActive(filterDisabled);
+  } else if (filterAll) { setFilterChipActive(filterAll); }
+  const showUngrouped = getShowUngrouped && getShowUngrouped();
+  if (filterUngrouped) {
+    filterUngrouped.classList.toggle('chip-active', !!showUngrouped);
+  }
+  if (filterAll) filterAll.addEventListener('click', () => { setFilterStatus('all'); setFilterChipActive(filterAll); refresh(); });
+  if (filterEnabled) filterEnabled.addEventListener('click', () => { setFilterStatus('enabled'); setFilterChipActive(filterEnabled); refresh(); });
+  if (filterDisabled) filterDisabled.addEventListener('click', () => { setFilterStatus('disabled'); setFilterChipActive(filterDisabled); refresh(); });
+  if (filterUngrouped) filterUngrouped.addEventListener('click', () => { 
+    const active = filterUngrouped.classList.toggle('chip-active');
+    setShowUngrouped(active); 
+    refresh(); 
+  });
+}
+
+function initializeKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // Focus search with '/' or Ctrl+K
+    if ((e.key === '/' && !e.ctrlKey && !e.metaKey) || (e.ctrlKey && e.key.toLowerCase() === 'k')) {
+      const search = document.getElementById('globalSearch');
+      if (search) { e.preventDefault(); search.focus(); }
+      return;
+    }
+    // Toggle theme with 'd'
+    if (e.key.toLowerCase() === 'd' && !e.ctrlKey && !e.metaKey) {
+      const next = getTheme() === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+      const toggle = document.getElementById('themeToggle');
+      if (toggle) toggle.checked = next === 'dark';
+      flashStatus(`Theme: ${next}`, 'info');
+      return;
+    }
+  });
 }

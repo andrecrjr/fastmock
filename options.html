@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="h-screen">
+<html class="h-screen" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <title>Mockzilla · Rule Manager</title>
@@ -7,87 +7,173 @@
     <!-- Tailwind v4 runtime compiles this style block -->
     <style type="text/tailwindcss">
       @theme {
-        /* Default Tailwind theme */
+        --color-brand: #7c3aed; /* purple-600 */
+        --color-brand-700: #6d28d9;
+        --color-brand-50: #f5f3ff;
+        --color-accent: #22c55e; /* green-500 */
+        --shadow-soft: 0 1px 2px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+        --radius-md: 0.5rem;
       }
 
       /* Design system tokens: colors, spacing, radii, shadows */
       @layer components {
+        button { @apply cursor-pointer; }
         .btn { @apply inline-flex items-center justify-center rounded-md border text-xs font-medium px-3 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500; }
-        .btn-primary { @apply bg-blue-600 border-blue-700 text-white hover:bg-blue-700; }
+        .btn-primary { @apply bg-purple-600 border-purple-700 text-white hover:bg-purple-700; }
         .btn-neutral { @apply bg-white border-gray-300 text-gray-800 hover:bg-gray-100; }
         .btn-danger { @apply bg-red-600 border-red-700 text-white hover:bg-red-700; }
         .btn-success { @apply bg-green-600 border-green-700 text-white hover:bg-green-700; }
-        .input { @apply text-xs border border-gray-300 rounded px-2 py-1 focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-200; }
-        .select { @apply text-xs border border-gray-300 rounded px-2 py-1 focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-200; }
-        .textarea { @apply w-full text-xs border border-gray-300 rounded p-2 min-h-[120px] focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-200; }
-        .card { @apply block rounded-md border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow; }
-        .label { @apply text-xs font-medium text-gray-700; }
+        .input { @apply text-xs rounded px-2 py-1 bg-white border border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-[#0b0f1a] dark:border-[#1b2235] dark:text-purple-100 dark:placeholder-purple-300/60; }
+        .select { @apply text-xs rounded px-2 py-1 bg-white border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-[#0b0f1a] dark:border-[#1b2235] dark:text-purple-100; }
+        .textarea { @apply w-full text-xs rounded p-2 min-h-[120px] bg-white border border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-[#0b0f1a] dark:border-[#1b2235] dark:text-purple-100 dark:placeholder-purple-300/60; }
+        .card { @apply block rounded-md border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow dark:border-[#1b2235] dark:bg-[#0f1424]; }
+        .label { @apply text-xs font-medium text-gray-700 dark:text-gray-300; }
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #22c55e; }
         input:checked + .slider:before { transform: translateX(20px); }
+
+        .chip { @apply inline-flex items-center gap-1 rounded-full border border-gray-300 bg-gray-50 px-2 py-1 text-[10px] text-gray-700 hover:bg-purple-50 dark:border-[#1b2235] dark:bg-[#0b0f1a] dark:text-purple-200 dark:hover:bg-purple-700/20; }
+        /* Active state for filter chips respects light/dark theme */
+        .chip-active { @apply border-purple-300 bg-purple-100 text-purple-700 dark:border-purple-700/40 dark:bg-purple-700/30 dark:text-purple-200; }
+        .badge { @apply inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium; }
+        .badge-green { @apply bg-green-100 text-green-700; }
+        .badge-gray { @apply bg-gray-100 text-gray-700; }
+        .kbd { @apply inline-flex items-center rounded border border-gray-300 bg-gray-50 px-1 text-[10px] font-mono text-gray-600; }
+        .skeleton { @apply animate-pulse bg-gray-200 rounded; }
+        .toast { @apply pointer-events-auto rounded-md shadow-lg border bg-white px-3 py-2 text-xs; box-shadow: var(--shadow-soft); }
+        .toast-success { @apply border-green-200 text-green-700 bg-green-50; }
+        .toast-error { @apply border-red-200 text-red-700 bg-red-50; }
+        .toast-info { @apply border-blue-200 text-blue-700 bg-blue-50; }
+        .icon-btn { @apply inline-flex items-center justify-center rounded-md border border-purple-300 bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1 text-xs dark:border-purple-700/40 dark:bg-purple-700/20 dark:text-purple-200 dark:hover:bg-purple-700/30; }
+        .pill { @apply inline-flex items-center rounded-full bg-purple-100 text-purple-700 border border-purple-300 px-2 py-0.5 text-[10px] dark:bg-purple-700/20 dark:text-purple-200 dark:border-purple-700/40; }
       }
     </style>
   </head>
-  <body class="bg-gray-100 text-gray-800 min-h-screen">
+  <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen">
     <!-- Header -->
-    <header class="bg-white border-b shadow-sm">
+    <header class="bg-white dark:bg-[#0b0f1a] border-b border-gray-200 dark:border-[#1b2235] shadow-sm">
       <div class="container mx-auto px-4 py-3">
         <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-lg font-semibold text-gray-900">Mockzilla Rule Manager</h1>
-            <p class="text-sm text-gray-600">Manage and monitor your API request interception rules</p>
-          </div>
           <div class="flex items-center gap-3">
-            <button id="toggleRules" class="toggle on btn btn-primary rounded-full" role="switch" aria-label="Toggle data processing rules" aria-checked="true" tabindex="0">Disable Rules</button>
+            <div class="w-9 h-9 rounded-xl grid place-items-center bg-purple-100 border border-purple-300 dark:bg-purple-700/30 dark:border-purple-700/40">
+              <!-- Heroicon: sparkles -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-purple-700 dark:text-purple-300">
+                <path d="M5 3a1 1 0 011 1v1a1 1 0 102 0V4a1 1 0 112 0v1a1 1 0 102 0V4a1 1 0 112 0v1a1 1 0 102 0V4a1 1 0 012 0v1a1 1 0 102 0V4a1 1 0 012 0v1a1 1 0 102 0V4a1 1 0 011-1h.01"/>
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Mockzilla</h1>
+              <p class="text-[11px] text-purple-700 dark:text-purple-200">Powerful API Mocking Unleashed</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <!-- Theme icon button -->
+            <button id="settingsBtn" class="icon-btn" title="Theme">
+              <!-- Heroicon: sun -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+                <path d="M12 2.25a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zm0 16.5a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-1.5a.75.75 0 01.75-.75zm9.75-6.75a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM4.5 12a.75.75 0 01-.75.75H2.25a.75.75 0 010-1.5H3.75A.75.75 0 014.5 12zm13.09 6.84a.75.75 0 01-1.06 1.06l-1.06-1.06a.75.75 0 111.06-1.06l1.06 1.06zM8.53 6.16a.75.75 0 01-1.06 0L6.41 5.1a.75.75 0 111.06-1.06l1.06 1.06a.75.75 0 010 1.06zm9.19-2.12a.75.75 0 011.06 1.06l-1.06 1.06a.75.75 0 11-1.06-1.06l1.06-1.06zM6.16 15.47a.75.75 0 010 1.06L5.1 17.59a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0z"/>
+              </svg>
+            </button>
+            <button id="exportIconBtn" class="icon-btn" title="Export">
+              <!-- Heroicon: arrow-up-tray -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+                <path d="M3 16.5A2.5 2.5 0 015.5 14h3a.75.75 0 010 1.5h-3a1 1 0 00-1 1V19a1 1 0 001 1h13a1 1 0 001-1v-2.5a1 1 0 00-1-1h-3a.75.75 0 010-1.5h3A2.5 2.5 0 0121 16.5V19a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 19v-2.5z"/>
+                <path d="M12 3.75a.75.75 0 01.75.75v8.19l2.47-2.47a.75.75 0 111.06 1.06l-3.75 3.75a.75.75 0 01-1.06 0L7.72 11.28a.75.75 0 111.06-1.06l2.47 2.47V4.5a.75.75 0 01.75-.75z"/>
+              </svg>
+            </button>
+            <button id="importIconBtn" class="icon-btn" title="Import">
+              <!-- Heroicon: arrow-down-tray -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+                <path d="M3 16.5A2.5 2.5 0 015.5 14h13A2.5 2.5 0 0121 16.5V19a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 19v-2.5z"/>
+                <path d="M12 3.75a.75.75 0 01.75.75v5.69l2.47-2.47a.75.75 0 111.06 1.06l-3.75 3.75a.75.75 0 01-1.06 0L7.72 8.78a.75.75 0 111.06-1.06l2.47 2.47V4.5a.75.75 0 01.75-.75z"/>
+              </svg>
+            </button>
           </div>
         </div>
         
-        <div class="mt-3 flex items-center gap-2">
-          <button id="addGroup" class="btn btn-success flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            Add Group
-          </button>
-          <button id="addRule" class="btn btn-primary flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            Add Rule
-          </button>
-          <button id="exportRules" class="btn btn-neutral flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-            </svg>
-            Export Rules
-          </button>
-          <button id="importRules" class="btn btn-neutral flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-            </svg>
-            Import Rules
-          </button>
-          <div id="statusMessage" class="ml-auto text-xs text-gray-600" aria-live="polite" aria-atomic="true"></div>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+            <div class="relative flex-1">
+              <!-- Heroicon: magnifying-glass -->
+              <svg class="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-purple-200" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M10.5 3a7.5 7.5 0 015.98 12.2l3.41 3.41a1 1 0 01-1.42 1.42l-3.41-3.41A7.5 7.5 0 1110.5 3zm0 2a5.5 5.5 0 100 11 5.5 5.5 0 000-11z"/></svg>
+              <input id="globalSearch" class="input w-full pl-7" placeholder="Search rules by name" aria-label="Search rules" />
+            </div>
+            <select id="sortSelect" class="select">
+              <option value="recent">Recent</option>
+              <option value="az">A → Z</option>
+              <option value="enabled">Enabled first</option>
+            </select>
+            <div class="chip"><span class="hidden sm:inline">Density</span>
+              <select id="densityToggle" class="select"><option value="comfortable">Comfort</option><option value="compact">Compact</option></select>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="addGroup" class="btn btn-success flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Group</button>
+            <button id="addRule" class="btn btn-primary flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Rule</button>
+            <button id="exportRules" class="btn btn-neutral flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Export</button>
+            <button id="importRules" class="btn btn-neutral flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>Import</button>
+            <div id="statusMessage" class="ml-auto text-xs text-gray-600" aria-live="polite" aria-atomic="true"></div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="chip">Filters:</span>
+            <button id="filterAll" class="chip">
+              <!-- Heroicon: rectangle-stack -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3"><path d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v12A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18V6z"/></svg>
+              <span>All</span>
+            </button>
+            <button id="filterEnabled" class="chip">
+              <!-- Heroicon: check-circle -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm4.03 7.47a.75.75 0 10-1.06-1.06l-4.5 4.5-1.94-1.94a.75.75 0 10-1.06 1.06l2.47 2.47a.75.75 0 001.06 0l5.03-5.03z" clip-rule="evenodd"/></svg>
+              <span>Enabled</span>
+            </button>
+            <button id="filterDisabled" class="chip">
+              <!-- Heroicon: x-circle -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm3.53 6.72a.75.75 0 10-1.06-1.06L12 10.69 9.53 7.91a.75.75 0 10-1.06 1.06l2.47 2.47-2.47 2.47a.75.75 0 101.06 1.06L12 12.81l2.47 2.47a.75.75 0 101.06-1.06l-2.47-2.47 2.47-2.47z" clip-rule="evenodd"/></svg>
+              <span>Disabled</span>
+            </button>
+            <button id="filterUngrouped" class="chip">
+              <!-- Heroicon: folder-open -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3"><path d="M9.525 6.75a2.25 2.25 0 011.59.66l.975.99h5.21A2.25 2.25 0 0120.25 11v7.5A2.25 2.25 0 0118 20.75H6A2.25 2.25 0 013.75 18.5v-9A2.25 2.25 0 016 7.25h3.525z"/></svg>
+              <span>Ungrouped</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>
 
     <div class="container mx-auto px-4 py-4 flex gap-6">
       <!-- Rules List Sidebar -->
-      <aside class="w-80 bg-white rounded-lg border border-gray-200 shadow-sm h-[calc(100vh-140px)] overflow-y-auto">
-        <div class="p-3 border-b">
+      <aside class="group w-80 bg-white dark:bg-[#0f1424] rounded-lg border border-gray-200 dark:border-[#1b2235] shadow-sm h-[calc(100vh-140px)] overflow-y-auto transition-colors hover:border-purple-500/40 dark:hover:border-purple-700/40">
+        <div class="p-3 border-b border-[#1b2235]">
           <div class="flex items-center justify-between">
-            <h2 class="font-medium text-gray-800">Groups & Rules</h2>
+            <h2 class="font-medium text-gray-800 dark:text-purple-100 group-hover:text-purple-700 dark:group-hover:text-white">Folders & Rules</h2>
             <div class="flex space-x-1">
               <button id="collapseAll" class="text-xs text-gray-500 hover:text-gray-700">Collapse All</button>
               <span class="text-gray-300">|</span>
               <button id="expandAll" class="text-xs text-gray-500 hover:text-gray-700">Expand All</button>
             </div>
           </div>
-          <p class="text-xs text-gray-600">Click to manage rules and groups</p>
+          <div class="flex items-center justify-between mt-2">
+            <p class="text-xs text-gray-500 dark:text-gray-400 group-hover:text-purple-700 dark:group-hover:text-purple-200">Click to manage rules and folders</p>
+            <span id="groupsCount" class="pill">0 folders</span>
+          </div>
+        </div>
+        <!-- Quick create folder card -->
+        <div class="p-3">
+          <div class="card">
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-purple-100 mb-2">Create Folder</h3>
+            <div class="flex items-center gap-2">
+              <input id="quickGroupName" class="input flex-1" placeholder="Folder name" />
+              <button id="quickCreateGroup" class="btn btn-primary flex items-center gap-1">
+                <!-- Heroicon: folder-plus -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M9.525 6.75a2.25 2.25 0 011.59.66l.975.99h5.21A2.25 2.25 0 0120.25 11v7.5A2.25 2.25 0 0118 20.75H6A2.25 2.25 0 013.75 18.5v-9A2.25 2.25 0 016 7.25h3.525z"/><path d="M12 13.5a.75.75 0 01.75.75v1.5h1.5a.75.75 0 010 1.5h-1.5v1.5a.75.75 0 01-1.5 0v-1.5H9.75a.75.75 0 010-1.5h1.5v-1.5a.75.75 0 01.75-.75z"/></svg>
+                Create Folder
+              </button>
+            </div>
+          </div>
         </div>
         <div id="rulesList" class="p-2 space-y-1">
           <!-- Groups and rules will be populated here -->
@@ -96,20 +182,22 @@
       </aside>
 
       <!-- Main Content Area -->
-      <main class="flex-1 bg-white rounded-lg border border-gray-200 shadow-sm p-4 min-h-[calc(100vh-140px)]">
+      <main class="flex-1 bg-white dark:bg-[#0f1424] rounded-lg border border-gray-200 dark:border-[#1b2235] shadow-sm p-4 min-h-[calc(100vh-140px)]">
         <div id="ruleDetails">
           <div class="text-center text-gray-500 p-8">
             <div class="mb-4">
-              <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-              </svg>
+              <!-- Heroicon: folder -->
+              <svg class="w-12 h-12 mx-auto text-purple-300" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M9.525 6.75a2.25 2.25 0 011.59.66l.975.99h5.21A2.25 2.25 0 0120.25 11v7.5A2.25 2.25 0 0118 20.75H6A2.25 2.25 0 013.75 18.5v-9A2.25 2.25 0 016 7.25h3.525z"/></svg>
             </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-1">Select a rule or group to manage</h3>
-            <p class="text-gray-500">Choose a rule or group from the sidebar to view and edit its details</p>
+            <h3 class="text-lg font-medium text-gray-800 dark:text-purple-100 mb-1">No folders created yet</h3>
+            <p class="text-gray-500 dark:text-purple-200">Create your first folder to organize your mocks</p>
           </div>
         </div>
       </main>
     </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none"></div>
 
     <!-- Import Modal -->
     <div id="importModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">

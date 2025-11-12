@@ -195,3 +195,11 @@ function createMockResponse(rule) {
 - Console messages identify Mockzilla origin
 - Network tab shows mock responses with distinguishing headers
 - Extension popup displays hit statistics per tab
+
+### Extension Subscription Model
+- User subscription required for full feature access
+- Subscription management with ExtPay
+- Free tier with limited features
+  - Basic rule creation and management
+  - Free Limited to 15 rules per subscription
+

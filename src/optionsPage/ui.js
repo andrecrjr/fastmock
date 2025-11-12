@@ -3,7 +3,7 @@
 import { escapeHtml, flashStatus, isValidJSON } from './utils.js';
 import { selectRule, selectGroup, refresh } from './ruleManager.js';
 import { setRuleMeta, setRuleBody, deleteRule, deleteGroup, setGroup, getRules } from './storage.js';
-import { groupExpandedState, getSelectedId, getSelectedType, getGroupExpanded, setGroupExpanded } from './state.js';
+import { groupExpandedState, getSelectedId, getSelectedType, getGroupExpanded, setGroupExpanded, getSearchQuery, getSortOrder, getFilterStatus, getShowUngrouped, getDensity, clearSelection } from './state.js';
 
 function renderRulesList(rules, groups) {
   const root = document.getElementById('rulesList');
@@ -14,13 +14,24 @@ function renderRulesList(rules, groups) {
     return;
   }
 
-  // Group rules by their group ID
+  // Apply search, filter, sort
+  let filtered = [...rules];
+  const q = getSearchQuery().toLowerCase();
+  if (q) {
+    filtered = filtered.filter(r => (r.name || '').toLowerCase().includes(q) || (r.pattern || '').toLowerCase().includes(q));
+  }
+  const status = getFilterStatus();
+  if (status === 'enabled') filtered = filtered.filter(r => r.enabled);
+  if (status === 'disabled') filtered = filtered.filter(r => !r.enabled);
+  const sort = getSortOrder();
+  if (sort === 'az') filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  if (sort === 'enabled') filtered.sort((a, b) => Number(b.enabled) - Number(a.enabled));
+
+  // Group rules by their group ID (after filtering)
   const rulesByGroup = {};
-  rules.forEach(rule => {
+  filtered.forEach(rule => {
     const groupId = rule.group || 'ungrouped';
-    if (!rulesByGroup[groupId]) {
-      rulesByGroup[groupId] = [];
-    }
+    if (!rulesByGroup[groupId]) rulesByGroup[groupId] = [];
     rulesByGroup[groupId].push(rule);
   });
 
@@ -30,7 +41,8 @@ function renderRulesList(rules, groups) {
     const isExpanded = getGroupExpanded(group.id); // Default to true if not set
     
     const groupItem = document.createElement('div');
-    groupItem.className = `group-item p-2 rounded cursor-pointer flex items-center justify-between ${getSelectedType() === 'group' && getSelectedId() === group.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'}`;
+    const densityPad = getDensity() === 'compact' ? 'p-1' : 'p-2';
+    groupItem.className = `group-item ${densityPad} rounded cursor-pointer flex items-center justify-between ${getSelectedType() === 'group' && getSelectedId() === group.id ? 'bg-purple-900 border border-blue-200' : 'hover:bg-gray-800'}`;
     groupItem.dataset.groupId = group.id;
 
     // Get rules in this group to show count
@@ -46,7 +58,7 @@ function renderRulesList(rules, groups) {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
           ${escapeHtml(group.name)}
-          <span class="ml-2 text-xs text-gray-500">(${groupRules.length} rules)</span>
+          <span class="ml-2 badge badge-gray">${groupRules.length} rules</span>
         </div>
         <div class="text-xs text-gray-500 truncate">${escapeHtml(group.description)}</div>
       </div>
@@ -88,7 +100,8 @@ function renderRulesList(rules, groups) {
       const groupRules = rulesByGroup[group.id] || [];
       groupRules.forEach(rule => {
         const ruleItem = document.createElement('div');
-        ruleItem.className = `rule-item p-2 rounded cursor-pointer flex items-center justify-between ml-4 ${getSelectedType() === 'rule' && getSelectedId() === rule.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'}`;
+        const densityPad = getDensity() === 'compact' ? 'p-1' : 'p-2';
+        ruleItem.className = `rule-item ${densityPad} rounded cursor-pointer flex items-center justify-between ml-4 ${getSelectedType() === 'rule' && getSelectedId() === rule.id ? 'bg-purple-900 border border-blue-200' : 'hover:bg-gray-800'}`;
         ruleItem.dataset.ruleId = rule.id;
 
         ruleItem.innerHTML = `
@@ -97,7 +110,7 @@ function renderRulesList(rules, groups) {
             <div class="text-xs text-gray-500 truncate">${escapeHtml(rule.pattern)}</div>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs ${rule.enabled ? 'text-green-500' : 'text-gray-400'}">${rule.enabled ? 'ON' : 'OFF'}</span>
+            <span class="badge ${rule.enabled ? 'badge-green' : 'badge-gray'}">${rule.enabled ? 'ON' : 'OFF'}</span>
             <button class="delete-btn text-red-500 hover:text-red-700" title="Delete rule">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -117,9 +130,8 @@ function renderRulesList(rules, groups) {
             await deleteRule(rule.id);
             await refresh();
             // If deleted rule was selected, clear selection
-            if (selectedType === 'rule' && selectedId === rule.id) {
-              selectedId = null;
-              selectedType = null;
+            if (getSelectedType() === 'rule' && getSelectedId() === rule.id) {
+              clearSelection();
               renderRuleDetails(null);
             }
             flashStatus('Rule deleted', 'success');
@@ -132,8 +144,9 @@ function renderRulesList(rules, groups) {
   });
 
   // Render ungrouped rules if any exist
+  const showUngrouped = getShowUngrouped();
   const ungroupedRules = rulesByGroup.ungrouped || [];
-  if (ungroupedRules.length > 0) {
+  if (showUngrouped && ungroupedRules.length > 0) {
     // Add toggle for ungrouped rules
     const ungroupedExpanded = getGroupExpanded('ungrouped');
     const ungroupedHeader = document.createElement('div');
@@ -142,7 +155,7 @@ function renderRulesList(rules, groups) {
       <svg class="w-4 h-4 mr-1 expand-icon ${ungroupedExpanded ? '' : 'rotate-180'}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
       </svg>
-      Ungrouped Rules (${ungroupedRules.length})
+      Ungrouped Rules <span class="ml-1 badge badge-gray">${ungroupedRules.length}</span>
     `;
     
     ungroupedHeader.addEventListener('click', () => {
@@ -156,7 +169,8 @@ function renderRulesList(rules, groups) {
     if (ungroupedExpanded) {
       ungroupedRules.forEach(rule => {
         const ruleItem = document.createElement('div');
-        ruleItem.className = `rule-item p-2 rounded cursor-pointer flex items-center justify-between ${getSelectedType() === 'rule' && getSelectedId() === rule.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'}`;
+        const densityPad = getDensity() === 'compact' ? 'p-1' : 'p-2';
+        ruleItem.className = `rule-item ${densityPad} rounded cursor-pointer flex items-center justify-between ${getSelectedType() === 'rule' && getSelectedId() === rule.id ? 'bg-purple-900 border border-blue-200' : 'hover:bg-gray-800'}`;
         ruleItem.dataset.ruleId = rule.id;
 
         ruleItem.innerHTML = `
@@ -165,7 +179,7 @@ function renderRulesList(rules, groups) {
             <div class="text-xs text-gray-500 truncate">${escapeHtml(rule.pattern)}</div>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs ${rule.enabled ? 'text-green-500' : 'text-gray-400'}">${rule.enabled ? 'ON' : 'OFF'}</span>
+            <span class="badge ${rule.enabled ? 'badge-green' : 'badge-gray'}">${rule.enabled ? 'ON' : 'OFF'}</span>
             <button class="delete-btn text-red-500 hover:text-red-700" title="Delete rule">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -305,7 +319,7 @@ function renderRuleDetails(rule) {
   const bodyEl = detailsContainer.querySelector('.body');
   const enabledToggle = detailsContainer.querySelector('.enabled-toggle');
 
-  nameEl.addEventListener('input', async () => {
+  nameEl.addEventListener('blur', async () => {
     rule.name = nameEl.value;
     await setRuleMeta(rule);
     renderRulesList(window.currentRules || [], window.currentGroups || []); // Update the sidebar
@@ -325,7 +339,7 @@ function renderRuleDetails(rule) {
     flashStatus('Match type updated', 'success');
   });
 
-  patternEl.addEventListener('input', async () => {
+  patternEl.addEventListener('blur', async () => {
     rule.pattern = patternEl.value;
     await setRuleMeta(rule);
     flashStatus('Pattern saved', 'success');
@@ -355,7 +369,7 @@ function renderRuleDetails(rule) {
     flashStatus('Body type updated', 'success');
   });
 
-  bodyEl.addEventListener('input', async () => {
+  bodyEl.addEventListener('blur', async () => {
     rule.body = bodyEl.value;
     await setRuleBody(rule.id, rule.body);
     if (rule.bodyType === 'json') {
@@ -417,7 +431,7 @@ function renderGroupDetails(group) {
         
         <div>
           <label class="label block mb-1">Rules in this Group</label>
-          <div class="border rounded p-2 bg-gray-50 max-h-60 overflow-y-auto">
+          <div class="border rounded p-2 bg-gray-800 max-h-60 overflow-y-auto">
             ${(window.currentRules || [])
               .filter(rule => rule.group === group.id)
               .map(rule => 
@@ -436,14 +450,14 @@ function renderGroupDetails(group) {
   const nameEl = detailsContainer.querySelector('.group-name');
   const descriptionEl = detailsContainer.querySelector('.group-description');
 
-  nameEl.addEventListener('input', async (e) => {
+  nameEl.addEventListener('blur', async (e) => {
     group.name = e.target.value;
     await setGroup(group);
     renderRulesList(window.currentRules || [], window.currentGroups || []); // Update the sidebar
     flashStatus('Group name updated', 'success');
   });
 
-  descriptionEl.addEventListener('input', async (e) => {
+  descriptionEl.addEventListener('blur', async (e) => {
     group.description = e.target.value;
     await setGroup(group);
     flashStatus('Group description updated', 'success');
