@@ -13,6 +13,12 @@
     "default_title": "Mockzilla"
   },
   "options_page": "options.html",
+  "icons": {
+    "16": "assets/mockzilla.png",
+    "32": "assets/mockzilla.png",
+    "48": "assets/mockzilla.png",
+    "128": "assets/mockzilla.png"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

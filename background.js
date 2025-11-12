@@ -22,6 +22,16 @@ async function incrementHit(sender, payload) {
   tabHits[payload.ruleId] = ruleHits;
   hitsByTab[tabId] = tabHits;
   await setSession('hitsByTab', hitsByTab);
+  
+  // Change the extension icon to indicate activity
+  chrome.action.setIcon({
+    path: {
+      "16": "assets/mockzila-active.png",
+      "32": "assets/mockzila-active.png", 
+      "48": "assets/mockzila-active.png",
+      "128": "assets/mockzila-active.png"
+    }
+  });
 }
 
 async function getTabHits(tabId) {
@@ -29,10 +39,53 @@ async function getTabHits(tabId) {
   return hitsByTab[tabId] ?? {};
 }
 
+// Function to determine and set the appropriate icon for a tab
+async function updateTabIcon(tabId) {
+  const hits = await getTabHits(tabId);
+  const hasHits = Object.keys(hits).some(ruleId => hits[ruleId].count > 0);
+  
+  const iconPath = hasHits ? {
+    "16": "assets/mockzila-active.png",
+    "32": "assets/mockzila-active.png", 
+    "48": "assets/mockzila-active.png",
+    "128": "assets/mockzila-active.png"
+  } : {
+    "16": "assets/mockzilla.png",
+    "32": "assets/mockzilla.png", 
+    "48": "assets/mockzilla.png",
+    "128": "assets/mockzilla.png"
+  };
+  
+  // Update the icon for the specific tab (if available) or globally
+  try {
+    // First try to set for the specific tab
+    if (tabId) {
+      chrome.action.setIcon({
+        tabId: tabId,
+        path: iconPath
+      });
+    } else {
+      // If no specific tab, set globally
+      chrome.action.setIcon({
+        path: iconPath
+      });
+    }
+  } catch (error) {
+    // If tab-specific icon fails (tab might not be active), set global icon
+    chrome.action.setIcon({
+      path: iconPath
+    });
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const type = message?.type;
   if (type === 'RULE_HIT') {
-    incrementHit(sender, message).then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
+    const tabId = sender?.tab?.id;
+    incrementHit(sender, message).then(() => {
+      updateTabIcon(tabId); // Update icon after incrementing hit
+      sendResponse({ ok: true });
+    }).catch(() => sendResponse({ ok: false }));
     return true;
   }
 
@@ -47,7 +100,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     getSession('hitsByTab', {}).then((hitsByTab) => {
       hitsByTab[tabId] = {};
       return setSession('hitsByTab', hitsByTab);
-    }).then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
+    }).then(() => {
+      updateTabIcon(tabId); // Update icon after clearing hits
+      sendResponse({ ok: true });
+    }).catch(() => sendResponse({ ok: false }));
     return true;
   }
 
@@ -70,4 +126,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   return false;
+});
+
+// Also listen for tab updates to reset icon when a tab is navigated to a new page
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') {
+    // Update icon when tab is fully loaded
+    updateTabIcon(tabId);
+  }
+});
+
+// Initialize the default icon when the service worker starts
+chrome.action.setIcon({
+  path: {
+    "16": "assets/mockzilla.png",
+    "32": "assets/mockzilla.png", 
+    "48": "assets/mockzilla.png",
+    "128": "assets/mockzilla.png"
+  }
 });
