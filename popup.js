@@ -209,7 +209,7 @@ function render(rules, hits) {
     detail.setAttribute('name', rule.name || `Rule ${index + 1}`);
     detail.__ruleId = rule.id;
 
-    // Header button
+    // Header button - showing only title, address, enabled status, and match type
     const header = document.createElement('button');
     header.className = 'w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer';
     header.id = `header-${rule.id}`;
@@ -219,280 +219,51 @@ function render(rules, hits) {
     header.tabIndex = 0;
     header.innerHTML = `
       <div class="flex items-center gap-2 min-w-0">
-        <span class="truncate max-w-[200px]">${escapeHtml(rule.name || 'Untitled rule')}</span>
-        <span class="text-xs ${rule.enabled ? 'text-green-500' : 'text-gray-400'} shrink-0">${rule.enabled ? 'ON' : 'OFF'}</span>
-        <span class="text-xs text-gray-500 shrink-0">${escapeHtml(rule.matchType)}</span>
-        <span class="ml-2 text-xs text-gray-500 shrink-0">Hits: <strong>${hits?.[rule.id]?.count || 0}</strong></span>
+        <span class="truncate max-w-[200px] dark:text-white">${escapeHtml(rule.name || 'Untitled rule')}</span>
       </div>
       <div class="flex items-center gap-2">
-        <div class="relative">
-          <button type="button" class="options-btn p-1 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Rule options">
-            ${optionsSvg}
-          </button>
-          <div class="options-dropdown absolute right-0 mt-1 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 hidden">
-            <div class="py-1" role="none">
-              <button class="duplicate-rule block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Duplicate Rule</button>
-              <button class="export-rule block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Export Rule</button>
-              <button class="disable-rule block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Disable Rule</button>
-              <button class="enable-rule block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Enable Rule</button>
-              <button class="delete-rule block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100" role="menuitem">Delete Rule</button>
-            </div>
-          </div>
-        </div>
+        <div class="text-xs text-gray-500 truncate max-w-[150px]">${escapeHtml(rule.pattern)}</div>
         <div class="shrink-0">${chevronSvg}</div>
       </div>
     `;
 
-    // Panel (collapsed by default)
+    // Panel (collapsed by default) - showing only essential information
     const panel = document.createElement('div');
     panel.id = `panel-${rule.id}`;
     panel.setAttribute('role', 'region');
     panel.setAttribute('aria-labelledby', header.id);
     panel.className = 'overflow-hidden max-h-0 transition-all duration-300 ease-in-out';
 
-    // Panel content
+    // Panel content - showing only essential information without edit controls
     const content = document.createElement('div');
     content.className = 'px-3 pb-3 pt-0';
     content.innerHTML = `
-      <div class="flex items-center justify-between mb-2 mt-1">
-        <input class="name input flex-1 mr-2" placeholder="Rule name" value="${escapeHtml(rule.name || '')}" aria-label="Rule name" />
-        <label class="switch flex items-center cursor-pointer">
-          <input type="checkbox" class="enabled-toggle" ${rule.enabled ? 'checked' : ''} aria-label="Enable rule" />
-          <span class="slider ml-2"></span>
-        </label>
-        <button class="delete btn btn-danger ml-2">Delete</button>
+      <div class="rule-info mb-2">
+        <div class="name-info mb-2">
+          <div class="label">Name</div>
+          <div class="text-sm break-all">${escapeHtml(rule.name || 'No name')}</div>
+        </div>
+        <div class="pattern-info mb-2">
+          <div class="label">Address</div>
+          <div class="text-sm font-mono bg-blue-100 dark:bg-[#1b2235] max-w-[300px] p-2 rounded overflow-x-auto">${escapeHtml(rule.pattern)}</div>
+        </div>
+        <div class="status-info flex gap-4">
+          <div>
+            <div class="label">Status</div>
+            <div class="text-sm ${rule.enabled ? 'text-green-600' : 'text-gray-500'}">${rule.enabled ? 'Enabled' : 'Disabled'}</div>
+          </div>
+          <div>
+            <div class="label">Match Type</div>
+            <div class="text-sm">${escapeHtml(rule.matchType)}</div>
+          </div>
+        </div>
       </div>
-      <div class="row mb-2 flex gap-2">
-        <select class="matchType select" aria-label="Match type">
-          <option value="substring" ${rule.matchType === 'substring' ? 'selected' : ''}>Substring</option>
-          <option value="exact" ${rule.matchType === 'exact' ? 'selected' : ''}>Exact</option>
-        </select>
-        <input class="pattern input w-full" placeholder="URL pattern" value="${escapeHtml(rule.pattern)}" aria-label="URL pattern" />
-        <select class="bodyType select" aria-label="Body type">
-          <option value="text" ${rule.bodyType === 'text' ? 'selected' : ''}>Text</option>
-          <option value="json" ${rule.bodyType === 'json' ? 'selected' : ''}>JSON</option>
-        </select>
-      </div>
-      <div class="row mb-2 flex gap-2">
-        <select class="statusCode select w-1/3" aria-label="Status code">
-          <option value="200" ${rule.statusCode === 200 ? 'selected' : ''}>200 OK</option>
-          <option value="201" ${rule.statusCode === 201 ? 'selected' : ''}>201 Created</option>
-          <option value="204" ${rule.statusCode === 204 ? 'selected' : ''}>204 No Content</option>
-          <option value="400" ${rule.statusCode === 400 ? 'selected' : ''}>400 Bad Request</option>
-          <option value="401" ${rule.statusCode === 401 ? 'selected' : ''}>401 Unauthorized</option>
-          <option value="403" ${rule.statusCode === 403 ? 'selected' : ''}>403 Forbidden</option>
-          <option value="404" ${rule.statusCode === 404 ? 'selected' : ''}>404 Not Found</option>
-          <option value="422" ${rule.statusCode === 422 ? 'selected' : ''}>422 Unprocessable Entity</option>
-          <option value="500" ${rule.statusCode === 500 ? 'selected' : ''}>500 Internal Server Error</option>
-          <option value="502" ${rule.statusCode === 502 ? 'selected' : ''}>502 Bad Gateway</option>
-          <option value="503" ${rule.statusCode === 503 ? 'selected' : ''}>503 Service Unavailable</option>
-        </select>
-
-      </div>
-      <div class="row mb-2">
-        <textarea class="body textarea" placeholder="Replacement body" aria-label="Replacement body">${escapeHtml(rule.body)}</textarea>
-        <div class="validation text-xs text-red-600 mt-1 hidden" data-error="json" role="alert"></div>
-      </div>
-      <div class="hits text-xs text-gray-600 mt-1">Hits: <strong>${hits?.[rule.id]?.count || 0}</strong> ${hits?.[rule.id]?.lastUrl ? `<span class="small">(last: ${escapeHtml(hits[rule.id].lastUrl)})</span>` : ''}</div>
     `;
 
     panel.appendChild(content);
     detail.appendChild(header);
     detail.appendChild(panel);
 
-    // Event wiring
-    const nameEl = content.querySelector('.name');
-    const matchTypeEl = content.querySelector('.matchType');
-    const patternEl = content.querySelector('.pattern');
-    const bodyTypeEl = content.querySelector('.bodyType');
-    const statusCodeEl = content.querySelector('.statusCode');
-    const statusTextEl = content.querySelector('.statusText');
-    const bodyEl = content.querySelector('.body');
-    const deleteBtn = content.querySelector('.delete');
-    
-    // Options dropdown elements
-    const optionsBtn = header.querySelector('.options-btn');
-    const optionsDropdown = header.querySelector('.options-dropdown');
-    const duplicateBtn = header.querySelector('.duplicate-rule');
-    const exportBtn = header.querySelector('.export-rule');
-    const disableBtn = header.querySelector('.disable-rule');
-    const enableBtn = header.querySelector('.enable-rule');
-    const deleteRuleBtn = header.querySelector('.delete-rule');
-
-    nameEl.addEventListener('input', () => {
-      rule.name = nameEl.value;
-      setRuleMeta(rule);
-      detail.setAttribute('name', rule.name || `Rule ${index + 1}`);
-      const nameSpan = header.querySelector('span.truncate');
-      if (nameSpan) nameSpan.textContent = rule.name || 'Untitled rule';
-      flashStatus('Name saved', 'success');
-    });
-    matchTypeEl.addEventListener('change', () => {
-      rule.matchType = matchTypeEl.value;
-      setRuleMeta(rule);
-      const typeSpan = header.querySelector('span.text-xs.text-gray-500');
-      if (typeSpan) typeSpan.textContent = rule.matchType;
-      flashStatus('Match type updated', 'success');
-    });
-    patternEl.addEventListener('input', () => {
-      rule.pattern = patternEl.value;
-      setRuleMeta(rule);
-      flashStatus('Pattern saved', 'success');
-    });
-    statusCodeEl.addEventListener('change', () => {
-      rule.statusCode = parseInt(statusCodeEl.value, 10);
-      setRuleMeta(rule);
-      flashStatus('Status code updated', 'success');
-    });
-    const enabledToggle = content.querySelector('.enabled-toggle');
-    enabledToggle.addEventListener('change', () => {
-      rule.enabled = enabledToggle.checked;
-      setRuleMeta(rule);
-      // Update the header display to show ON/OFF status
-      const statusSpan = header.querySelector('span.text-xs.text-green-500, span.text-xs.text-gray-400');
-      if (statusSpan) {
-        statusSpan.textContent = rule.enabled ? 'ON' : 'OFF';
-        statusSpan.className = `text-xs ${rule.enabled ? 'text-green-500' : 'text-gray-400'} shrink-0`;
-      }
-      flashStatus(rule.enabled ? 'Rule enabled' : 'Rule disabled', 'success');
-    });
-    bodyTypeEl.addEventListener('change', () => {
-      rule.bodyType = bodyTypeEl.value;
-      setRuleMeta(rule);
-      // Revalidate JSON when switching types
-      const errorEl = content.querySelector('[data-error="json"]');
-      if (errorEl) errorEl.classList.add('hidden');
-      bodyEl.removeAttribute('aria-invalid');
-      bodyEl.classList.remove('ring-1','ring-red-300','border-red-500','ring-green-300','border-green-500');
-      flashStatus('Body type updated', 'success');
-    });
-    bodyEl.addEventListener('input', () => {
-      rule.body = bodyEl.value;
-      setRuleBody(rule.id, rule.body);
-      if (rule.bodyType === 'json') {
-        const ok = isValidJSON(rule.body);
-        const errorEl = content.querySelector('[data-error="json"]');
-        if (!ok) {
-          bodyEl.setAttribute('aria-invalid','true');
-          bodyEl.classList.remove('ring-green-300','border-green-500');
-          bodyEl.classList.add('ring-1','ring-red-300','border-red-500');
-          if (errorEl) { errorEl.textContent = 'Invalid JSON. It will be returned as text.'; errorEl.classList.remove('hidden'); }
-          flashStatus('Invalid JSON', 'error');
-        } else {
-          bodyEl.removeAttribute('aria-invalid');
-          bodyEl.classList.remove('ring-1','ring-red-300','border-red-500');
-          bodyEl.classList.add('ring-green-300','border-green-500');
-          if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
-          flashStatus('Body saved', 'success');
-        }
-      } else {
-        flashStatus('Body saved', 'success');
-      }
-    });
-    
-    // Options dropdown functionality
-    optionsBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      // Close other dropdowns first
-      document.querySelectorAll('.options-dropdown').forEach(dropdown => {
-        if (dropdown !== optionsDropdown) {
-          dropdown.classList.add('hidden');
-        }
-      });
-      // Toggle current dropdown
-      optionsDropdown.classList.toggle('hidden');
-    });
-    
-    // Close dropdown when clicking elsewhere
-    document.addEventListener('click', (e) => {
-      if (!optionsBtn.contains(e.target) && !optionsDropdown.contains(e.target)) {
-        optionsDropdown.classList.add('hidden');
-      }
-    });
-    
-    // Duplicate rule
-    duplicateBtn.addEventListener('click', async () => {
-      optionsDropdown.classList.add('hidden');
-      const newRule = { 
-        ...rule, 
-        id: uid(), 
-        name: `${rule.name || 'Untitled rule'} (Copy)`
-      };
-      await setRule(newRule);
-      await refresh();
-      flashStatus('Rule duplicated', 'success');
-    });
-    
-    // Export rule
-    exportBtn.addEventListener('click', async () => {
-      optionsDropdown.classList.add('hidden');
-      const ruleForExport = {
-        id: rule.id,
-        name: rule.name,
-        matchType: rule.matchType,
-        pattern: rule.pattern,
-        enabled: rule.enabled,
-        bodyType: rule.bodyType,
-        statusCode: rule.statusCode,
-        body: rule.body
-      };
-      
-      const dataStr = JSON.stringify(ruleForExport, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', `mockzilla-rule-${rule.name || 'untitled'}.json`);
-      linkElement.click();
-      flashStatus('Rule exported', 'success');
-    });
-    
-    // Disable rule
-    disableBtn.addEventListener('click', async () => {
-      optionsDropdown.classList.add('hidden');
-      rule.enabled = false;
-      await setRuleMeta(rule);
-      // Update the header display to show ON/OFF status
-      const statusSpan = header.querySelector('span.text-xs.text-green-500, span.text-xs.text-gray-400');
-      if (statusSpan) {
-        statusSpan.textContent = 'OFF';
-        statusSpan.className = 'text-xs text-gray-400 shrink-0';
-      }
-      flashStatus('Rule disabled', 'success');
-    });
-    
-    // Enable rule
-    enableBtn.addEventListener('click', async () => {
-      optionsDropdown.classList.add('hidden');
-      rule.enabled = true;
-      await setRuleMeta(rule);
-      // Update the header display to show ON/OFF status
-      const statusSpan = header.querySelector('span.text-xs.text-green-500, span.text-xs.text-gray-400');
-      if (statusSpan) {
-        statusSpan.textContent = 'ON';
-        statusSpan.className = 'text-xs text-green-500 shrink-0';
-      }
-      flashStatus('Rule enabled', 'success');
-    });
-    
-    // Delete rule from options
-    deleteRuleBtn.addEventListener('click', async () => {
-      optionsDropdown.classList.add('hidden');
-      if (confirm(`Delete rule "${rule.name || 'Untitled rule'}"?`)) {
-        await deleteRule(rule.id);
-        await refresh();
-        flashStatus('Rule deleted', 'success');
-      }
-    });
-    
-    // Delete rule from panel (keep existing functionality)
-    deleteBtn.addEventListener('click', async () => {
-      if (confirm(`Delete rule "${rule.name || 'Untitled rule'}"?`)) {
-        await deleteRule(rule.id);
-        await refresh();
-        flashStatus('Rule deleted', 'success');
-      }
-    });
 
     function setOpen(isOpen) {
       header.setAttribute('aria-expanded', String(!!isOpen));
@@ -502,7 +273,7 @@ function render(rules, hits) {
       }
       // Use Tailwind classes to animate height
       panel.classList.toggle('max-h-0', !isOpen);
-      panel.classList.toggle('max-h-[520px]', !!isOpen);
+      panel.classList.toggle('max-h-[500px]', !!isOpen);
       __accordionOpen[rule.id] = !!isOpen;
       if (isOpen) {
         // Focus first interactive element for accessibility
