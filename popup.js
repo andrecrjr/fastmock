@@ -2,6 +2,52 @@
 
 const defaults = { rr_rules: [] };
 
+// Theme management
+let themePrefs = {
+  theme: 'light' // 'light' | 'dark'
+};
+
+// Load theme preferences
+function loadThemePrefs() {
+  try {
+    const raw = localStorage.getItem('mockzilla:theme-prefs');
+    if (raw) {
+      const obj = JSON.parse(raw);
+      themePrefs = { ...themePrefs, ...obj };
+    }
+  } catch {}
+  applyThemeToDOM();
+}
+
+// Save theme preferences
+function saveThemePrefs() {
+  try { 
+    localStorage.setItem('mockzilla:theme-prefs', JSON.stringify(themePrefs)); 
+  } catch {}
+}
+
+// Apply theme to DOM
+function applyThemeToDOM() {
+  const html = document.documentElement;
+  // Theme
+  html.setAttribute('data-theme', themePrefs.theme);
+  html.classList.toggle('dark', themePrefs.theme === 'dark');
+  // Some Tailwind dark-mode setups look for the class on body; add it for safety
+  document.body.classList.toggle('dark', themePrefs.theme === 'dark');
+}
+
+// Get current theme
+function getTheme() { 
+  return themePrefs.theme; 
+}
+
+// Set theme
+function setTheme(theme) { 
+  themePrefs.theme = theme; 
+  saveThemePrefs(); 
+  applyThemeToDOM(); 
+}
+
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -514,11 +560,7 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-document.getElementById('addRule').addEventListener('click', async () => {
-  const newRule = { id: uid(), name: '', matchType: 'exact', pattern: '', enabled: true, bodyType: 'json', statusCode: 200, body: '' };
-  await setRule(newRule);
-  await refresh();
-});
+
 
 document.getElementById('openOptions').addEventListener('click', async () => {
   if (window.chrome && chrome.runtime && chrome.runtime.openOptionsPage) {
@@ -537,6 +579,13 @@ document.getElementById('clearHits').addEventListener('click', async () => {
     await chrome.runtime.sendMessage({ type: 'CLEAR_TAB_HITS', tabId });
   }
   await refresh();
+});
+
+// Theme toggle button
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  const next = getTheme() === 'dark' ? 'light' : 'dark';
+  setTheme(next);
+  flashStatus(`Theme: ${next}`, 'info');
 });
 
 
@@ -631,4 +680,5 @@ async function refresh() {
   applyInitial();
 })();
 
+loadThemePrefs();
 refresh();

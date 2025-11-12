@@ -1,55 +1,95 @@
 <!doctype html>
-<html class="h-[600px] overflow-y-hidden">
+<html class="h-[600px] overflow-y-hidden" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <title>Mockzilla · Request Interceptor</title>
     <script src="tailwind-v4.js"></script>
     <!-- Tailwind v4 runtime compiles this style block -->
     <style type="text/tailwindcss">
+      @theme {
+        --color-brand: #7c3aed; /* purple-600 */
+        --color-brand-700: #6d28d9;
+        --color-brand-50: #f5f3ff;
+        --color-accent: #22c55e; /* green-500 */
+        --shadow-soft: 0 1px 2px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+        --radius-md: 0.5rem;
+      }
 
       /* Design system tokens: colors, spacing, radii, shadows */
       @layer components {
+        button { @apply cursor-pointer; }
         .btn { @apply inline-flex items-center justify-center rounded-md border text-xs font-medium px-3 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500; }
-        .btn-primary { @apply bg-blue-600 border-blue-700 text-white hover:bg-blue-700; }
+        .btn-primary { @apply bg-purple-600 border-purple-700 text-white hover:bg-purple-700; }
         .btn-neutral { @apply bg-white border-gray-300 text-gray-800 hover:bg-gray-100; }
         .btn-danger { @apply bg-red-600 border-red-700 text-white hover:bg-red-700; }
-        .input { @apply text-xs border border-gray-300 rounded px-2 py-1 focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-200; }
-        .select { @apply text-xs border border-gray-300 rounded px-2 py-1 focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-200; }
-        .textarea { @apply w-full text-xs border border-gray-300 rounded p-2 min-h-[120px] focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-200; }
-        .card { @apply block rounded-md border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow; }
-        .label { @apply text-xs font-medium text-gray-700; }
+        .btn-success { @apply bg-green-600 border-green-700 text-white hover:bg-green-700; }
+        .input { @apply text-xs rounded px-2 py-1 bg-white border border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-[#0b0f1a] dark:border-[#1b2235] dark:text-purple-100 dark:placeholder-purple-300/60; }
+        .select { @apply text-xs rounded px-2 py-1 bg-white border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-[#0b0f1a] dark:border-[#1b2235] dark:text-purple-100; }
+        .textarea { @apply w-full text-xs rounded p-2 min-h-[120px] bg-white border border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-[#0b0f1a] dark:border-[#1b2235] dark:text-purple-100 dark:placeholder-purple-300/60; }
+        .card { @apply block rounded-md border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow dark:border-[#1b2235] dark:bg-[#0f1424]; }
+        .label { @apply text-xs font-medium text-gray-700 dark:text-gray-300; }
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #22c55e; }
         input:checked + .slider:before { transform: translateX(20px); }
+
+        .chip { @apply inline-flex items-center gap-1 rounded-full border border-gray-300 bg-gray-50 px-2 py-1 text-[10px] text-gray-700 hover:bg-purple-50 dark:border-[#1b2235] dark:bg-[#0b0f1a] dark:text-purple-200 dark:hover:bg-purple-700/20; }
+        /* Active state for filter chips respects light/dark theme */
+        .chip-active { @apply border-purple-300 bg-purple-100 text-purple-700 dark:border-purple-700/40 dark:bg-purple-700/30 dark:text-purple-200; }
+        .badge { @apply inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium; }
+        .badge-green { @apply bg-green-100 text-green-700; }
+        .badge-gray { @apply bg-gray-100 text-gray-700; }
+        .kbd { @apply inline-flex items-center rounded border border-gray-300 bg-gray-50 px-1 text-[10px] font-mono text-gray-600; }
+        .skeleton { @apply animate-pulse bg-gray-200 rounded; }
+        .toast { @apply pointer-events-auto rounded-md shadow-lg border bg-white px-3 py-2 text-xs; box-shadow: var(--shadow-soft); }
+        .toast-success { @apply border-green-200 text-green-700 bg-green-50; }
+        .toast-error { @apply border-red-200 text-red-700 bg-red-50; }
+        .toast-info { @apply border-blue-200 text-blue-700 bg-blue-50; }
+        .icon-btn { @apply inline-flex items-center justify-center rounded-md border border-purple-300 bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1 text-xs dark:border-purple-700/40 dark:bg-purple-700/20 dark:text-purple-200 dark:hover:bg-purple-700/30; }
+        .pill { @apply inline-flex items-center rounded-full bg-purple-100 text-purple-700 border border-purple-300 px-2 py-0.5 text-[10px] dark:bg-purple-700/20 dark:text-purple-200 dark:border-purple-700/40; }
       }
     </style>
   </head>
-  <body class="bg-white text-gray-800 min-w-[360px] md:min-w-[600px] max-h-[600px]">
+  <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-w-[360px] md:min-w-[600px] max-h-[600px]">
     <!-- Header -->
-    <header class="border-b bg-gray-50">
-      <div class="flex items-center justify-between px-3 py-2 gap-3">
-        <div class="min-w-0">
-          <h1 class="text-sm font-semibold text-gray-900 truncate">Mockzilla</h1>
-          <p class="text-[11px] text-gray-600">Request Interceptor</p>
-        </div>
-        <div class="flex items-center gap-3">
-          <button id="toggleRules" class="toggle on btn btn-primary rounded-full" role="switch" aria-label="Toggle data processing rules" aria-checked="true" tabindex="0">Disable Rules</button>
-          <div id="statusMessage" class="text-xs text-gray-600" aria-live="polite" aria-atomic="true"></div>
+    <header class="bg-white dark:bg-[#0b0f1a] border-b border-gray-200 dark:border-[#1b2235] shadow-sm">
+      <div class="px-3 py-2 gap-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg grid place-items-center bg-purple-100 border border-purple-300 dark:bg-purple-700/30 dark:border-purple-700/40">
+              <!-- Heroicon: sparkles -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-purple-700 dark:text-purple-300">
+                <path d="M5 3a1 1 0 011 1v1a1 1 0 102 0V4a1 1 0 112 0v1a1 1 0 102 0V4a1 1 0 112 0v1a1 1 0 102 0V4a1 1 0 012 0v1a1 1 0 102 0V4a1 1 0 012 0v1a1 1 0 102 0V4a1 1 0 011-1h.01"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <h1 class="text-sm font-semibold text-gray-900 dark:text-white truncate">Mockzilla</h1>
+              <p class="text-[10px] text-purple-700 dark:text-purple-200">Request Interceptor</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="settingsBtn" class="icon-btn" title="Theme">
+              <!-- Heroicon: sun -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+                <path d="M12 2.25a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zm0 16.5a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-1.5a.75.75 0 01.75-.75zm9.75-6.75a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM4.5 12a.75.75 0 01-.75.75H2.25a.75.75 0 010-1.5H3.75A.75.75 0 014.5 12zm13.09 6.84a.75.75 0 01-1.06 1.06l-1.06-1.06a.75.75 0 111.06-1.06l1.06 1.06zM8.53 6.16a.75.75 0 01-1.06 0L6.41 5.1a.75.75 0 111.06-1.06l1.06 1.06a.75.75 0 010 1.06zm9.19-2.12a.75.75 0 011.06 1.06l-1.06 1.06a.75.75 0 11-1.06-1.06l1.06-1.06zM6.16 15.47a.75.75 0 010 1.06L5.1 17.59a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0z"/>
+              </svg>
+            </button>
+            <button id="toggleRules" class="toggle on btn btn-primary rounded-full" role="switch" aria-label="Toggle data processing rules" aria-checked="true" tabindex="0">Disable Rules</button>
+            <div id="statusMessage" class="text-xs text-gray-600 dark:text-gray-400" aria-live="polite" aria-atomic="true"></div>
+          </div>
         </div>
       </div>
-      <div class="px-3 pb-2 flex items-center gap-2">
-        <button id="addRule" class="btn btn-neutral">Add Rule</button>
+      <div class="px-3 pb-2 flex items-center gap-2 border-t border-gray-200 dark:border-[#1b2235] pt-2">
+        <button id="openOptions" class="btn btn-primary">Open Manager</button>
         <button id="clearHits" class="btn btn-neutral">Clear Hits</button>
-        <button id="openOptions" class="btn btn-neutral">Open Manager</button>
       </div>
     </header>
 
     <!-- Rules list -->
     <main class="px-2 pt-2">
-      <div id="rules" class="space-y-2 min-h-[200px] max-h-[520px] overflow-y-auto pr-1"></div>
+      <div id="rules" class="space-y-2 min-h-[200px] max-h-[520px] overflow-y-auto pr-1 card p-3"></div>
     </main>
 
     <script src="popup.js"></script>
