@@ -66,7 +66,7 @@ async function refresh() {
 
 // Add rule and group functions
 async function addRule() {
-  const newRule = { id: uid(), name: '', matchType: 'exact', pattern: '', enabled: true, bodyType: 'json', group: '', statusCode: 200, body: '' };
+  const newRule = { id: uid(), name: '', matchType: 'exact', pattern: '', enabled: true, bodyType: 'json', group: '', statusCode: 200, body: '', variants: [] };
   await setRule(newRule);
   await refresh();
   // Automatically select the new rule
@@ -120,7 +120,8 @@ async function exportRules() {
     bodyType: rule.bodyType,
     group: rule.group, // Include group information
     statusCode: rule.statusCode,
-    body: rule.body
+    body: rule.body,
+    variants: Array.isArray(rule.variants) ? rule.variants.map(v => ({ key: v.key, bodyType: v.bodyType, statusCode: v.statusCode, body: v.body })) : []
   }));
   
   const groupsForExport = groups.map(group => ({
@@ -201,6 +202,7 @@ async function importRules(importText) {
       
       // Ensure default status code if not present in import
       if (rule.statusCode === undefined) rule.statusCode = 200;
+      if (!Array.isArray(rule.variants)) rule.variants = [];
       
       // If rule already exists, update it; otherwise, create a new one
       await setRule(rule);

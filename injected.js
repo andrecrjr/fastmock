@@ -57,14 +57,62 @@
       // Compare normalized absolute forms for exact matching
       return target === absPattern;
     }
-    // Substring: match either raw (path-only) or absolute pattern
+    if (rule.matchType === 'wildcard') {
+      const m1 = matchWildcard(target, absPattern);
+      if (m1.ok) return true;
+      const m2 = matchWildcard(target, rawPattern);
+      return m2.ok;
+    }
     return target.includes(rawPattern) || target.includes(absPattern);
   }
 
+  function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function wildcardToRegex(p) {
+    const s = String(p || '');
+    const parts = s.split('*').map(escapeRegex);
+    const pattern = parts.join('(.+?)');
+    const anchored = s.includes('://') ? '^' + pattern + '$' : '.*' + pattern + '.*';
+    return new RegExp(anchored);
+  }
+
+  function matchWildcard(url, pattern) {
+    const p = String(pattern || '');
+    const re = wildcardToRegex(p);
+    const m = re.exec(url);
+    if (!m) return { ok: false, captures: [] };
+    const caps = m.slice(1);
+    return { ok: true, captures: caps };
+  }
+
+  function selectVariant(rule, url) {
+    if (rule.matchType !== 'wildcard') return null;
+    const rawPattern = sanitizePattern(rule.pattern);
+    const absPattern = normalizeUrl(rawPattern);
+    const mAbs = matchWildcard(url, absPattern);
+    const mRaw = mAbs.ok ? mAbs : matchWildcard(url, rawPattern);
+    const m = mRaw;
+    if (!m.ok) return null;
+    const key = m.captures.join('|');
+    const variants = Array.isArray(rule.variants) ? rule.variants : [];
+    const v = variants.find(x => String(x.key) === key);
+    if (!v) return null;
+    return {
+      bodyType: v.bodyType || rule.bodyType,
+      statusCode: v.statusCode || rule.statusCode || 200,
+      body: v.body ?? ''
+    };
+  }
+
   function buildResponse(rule, url) {
-    const headers = new Headers({ 'Content-Type': rule.bodyType === 'json' ? 'application/json' : 'text/plain' });
-    const body = rule.bodyType === 'json' ? JSON.stringify(safeParseJSON(rule.body)) : String(rule.body ?? '');
-    const statusCode = rule.statusCode || 200;
+    const variant = selectVariant(rule, url);
+    const bodyType = variant ? variant.bodyType : rule.bodyType;
+    const statusCode = variant ? variant.statusCode : (rule.statusCode || 200);
+    const bodyRaw = variant ? variant.body : rule.body;
+    const headers = new Headers({ 'Content-Type': bodyType === 'json' ? 'application/json' : 'text/plain' });
+    const body = bodyType === 'json' ? JSON.stringify(safeParseJSON(bodyRaw)) : String(bodyRaw ?? '');
     const statusText = getStatusCodeText(statusCode);
     return new Response(body, { status: statusCode, statusText: statusText, headers, url });
   }
@@ -139,8 +187,11 @@
       const rule = state.rules.find((r) => matchesRule(absUrl, r));
       if (rule) {
         notifyRuleHit(rule.id, absUrl);
-        const responseText = rule.bodyType === 'json' ? JSON.stringify(safeParseJSON(rule.body)) : String(rule.body ?? '');
-        const statusCode = rule.statusCode || 200;
+        const variant = selectVariant(rule, absUrl);
+        const bodyType = variant ? variant.bodyType : rule.bodyType;
+        const bodyRaw = variant ? variant.body : rule.body;
+        const responseText = bodyType === 'json' ? JSON.stringify(safeParseJSON(bodyRaw)) : String(bodyRaw ?? '');
+        const statusCode = variant ? variant.statusCode : (rule.statusCode || 200);
         const statusText = getStatusCodeText(statusCode);
         const _dispatch = this.dispatchEvent.bind(this);
 
@@ -167,7 +218,8 @@
       newRules.filter(Boolean).map(rule => ({
         ...rule,
         enabled: rule.enabled !== false, // default to true when unset
-        globalEnabled: rule.globalEnabled !== false // default to true when unset
+        globalEnabled: rule.globalEnabled !== false,
+        variants: Array.isArray(rule.variants) ? rule.variants : []
       })) : [];
   }
 

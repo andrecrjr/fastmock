@@ -15,8 +15,17 @@ async function getRules() {
       const id = key.substring('rr_rule_'.length);
       const value = allMetaItems[key];
       const bodyKey = `rr_body_${id}`;
+      const varBodyKey = `rr_varbody_${id}`;
       const bodyFromLocal = allBodyItems[bodyKey];
+      const varBodiesFromLocal = allBodyItems[varBodyKey] || {};
       if (value && typeof value === 'object') {
+        const variantsMeta = Array.isArray(value.variants) ? value.variants : [];
+        const variants = variantsMeta.map(v => ({
+          key: String(v.key || ''),
+          bodyType: v.bodyType || value.bodyType || 'json',
+          statusCode: v.statusCode || value.statusCode || 200,
+          body: typeof varBodiesFromLocal[String(v.key || '')] === 'string' ? varBodiesFromLocal[String(v.key || '')] : ''
+        }));
         rules.push({
           id,
           name: value.name || '',
@@ -28,6 +37,7 @@ async function getRules() {
           statusCode: value.statusCode || 200, // default to 200 when unset
           // Prefer body from local storage; fall back to any legacy body in sync
           body: (typeof bodyFromLocal === 'string') ? bodyFromLocal : (value.body || ''),
+          variants,
         });
       }
     }
@@ -72,12 +82,23 @@ async function setRule(rule) {
     bodyType: rule.bodyType,
     group: rule.group || '', // Save group association
     statusCode: rule.statusCode || 200,
+    variants: Array.isArray(rule.variants) ? rule.variants.map(v => ({ key: String(v.key || ''), bodyType: v.bodyType || rule.bodyType, statusCode: v.statusCode || rule.statusCode || 200 })) : [],
   };
   const bodyKey = `rr_body_${rule.id}`;
   const bodyValue = rule.body ?? '';
+  const varBodyKey = `rr_varbody_${rule.id}`;
+  const varBodyValue = (() => {
+    const out = {};
+    const arr = Array.isArray(rule.variants) ? rule.variants : [];
+    for (const v of arr) {
+      out[String(v.key || '')] = v.body ?? '';
+    }
+    return out;
+  })();
   await Promise.all([
     chrome.storage.sync.set({ [metaKey]: metaValue }),
     chrome.storage.local.set({ [bodyKey]: bodyValue }),
+    chrome.storage.local.set({ [varBodyKey]: varBodyValue }),
   ]);
 }
 
@@ -92,6 +113,7 @@ async function setRuleMeta(rule) {
     bodyType: rule.bodyType,
     group: rule.group || '', // Save group association
     statusCode: rule.statusCode || 200,
+    variants: Array.isArray(rule.variants) ? rule.variants.map(v => ({ key: String(v.key || ''), bodyType: v.bodyType || rule.bodyType, statusCode: v.statusCode || rule.statusCode || 200 })) : [],
   };
   await chrome.storage.sync.set({ [metaKey]: metaValue });
 }
@@ -102,15 +124,53 @@ async function setRuleBody(id, body) {
   await chrome.storage.local.set({ [bodyKey]: body ?? '' });
 }
 
+async function setRuleVariantsMeta(id, variants) {
+  if (!window.chrome || !chrome.storage || !chrome.storage.sync) return;
+  const metaKey = `rr_rule_${id}`;
+  const { [metaKey]: existing } = await chrome.storage.sync.get(metaKey);
+  const base = existing && typeof existing === 'object' ? existing : {};
+  const metaValue = { ...base, variants: Array.isArray(variants) ? variants.map(v => ({ key: String(v.key || ''), bodyType: v.bodyType || base.bodyType || 'json', statusCode: v.statusCode || base.statusCode || 200 })) : [] };
+  await chrome.storage.sync.set({ [metaKey]: metaValue });
+}
+
+async function setRuleVariantBody(id, key, body) {
+  if (!window.chrome || !chrome.storage || !chrome.storage.local) return;
+  const varBodyKey = `rr_varbody_${id}`;
+  const all = await chrome.storage.local.get(varBodyKey);
+  const current = all[varBodyKey] || {};
+  current[String(key || '')] = body ?? '';
+  await chrome.storage.local.set({ [varBodyKey]: current });
+}
+
 async function deleteRule(id) {
   if (!window.chrome || !chrome.storage || !chrome.storage.sync) {
     return;
   }
   const metaKey = `rr_rule_${id}`;
   const bodyKey = `rr_body_${id}`;
+  const varBodyKey = `rr_varbody_${id}`;
   await Promise.all([
     chrome.storage.sync.remove(metaKey),
     chrome.storage.local.remove(bodyKey),
+    chrome.storage.local.remove(varBodyKey),
+  ]);
+}
+
+async function deleteRuleVariant(id, key) {
+  if (!window.chrome || !chrome.storage) return;
+  const metaKey = `rr_rule_${id}`;
+  const bodyKey = `rr_varbody_${id}`;
+  const [{ [metaKey]: existing }, varsObj] = await Promise.all([
+    chrome.storage.sync.get(metaKey),
+    chrome.storage.local.get(bodyKey),
+  ]);
+  const base = existing && typeof existing === 'object' ? existing : {};
+  const nextVariants = Array.isArray(base.variants) ? base.variants.filter(v => String(v.key || '') !== String(key || '')) : [];
+  const bodies = varsObj[bodyKey] || {};
+  delete bodies[String(key || '')];
+  await Promise.all([
+    chrome.storage.sync.set({ [metaKey]: { ...base, variants: nextVariants } }),
+    chrome.storage.local.set({ [bodyKey]: bodies }),
   ]);
 }
 
@@ -159,4 +219,4 @@ async function setEnabled(enabled) {
   } catch {}
 }
 
-export { getRules, getGroups, setRule, setRuleMeta, setRuleBody, deleteRule, setGroup, deleteGroup, getEnabled, setEnabled, defaults };
+export { getRules, getGroups, setRule, setRuleMeta, setRuleBody, setRuleVariantsMeta, setRuleVariantBody, deleteRule, deleteRuleVariant, setGroup, deleteGroup, getEnabled, setEnabled, defaults };

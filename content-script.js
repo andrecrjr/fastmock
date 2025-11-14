@@ -73,7 +73,16 @@ async function loadRules() {
       const value = metaItems[key];
       if (value && typeof value === 'object') {
         const bodyKey = `rr_body_${id}`;
+        const varBodyKey = `rr_varbody_${id}`;
         const bodyFromLocal = bodyItems[bodyKey];
+        const varBodiesFromLocal = bodyItems[varBodyKey] || {};
+        const variantsMeta = Array.isArray(value.variants) ? value.variants : [];
+        const variants = variantsMeta.map(v => ({
+          key: String(v.key || ''),
+          bodyType: v.bodyType || value.bodyType || 'text',
+          statusCode: v.statusCode || value.statusCode || 200,
+          body: typeof varBodiesFromLocal[String(v.key || '')] === 'string' ? varBodiesFromLocal[String(v.key || '')] : ''
+        }));
         rules.push({
           id,
           matchType: value.matchType || 'substring',
@@ -83,7 +92,8 @@ async function loadRules() {
           statusCode: value.statusCode || 200,
           statusText: value.statusText || '',
           body: (typeof bodyFromLocal === 'string') ? bodyFromLocal : (value.body || ''),
-          globalEnabled: globalEnabled // Pass global state to page script
+          globalEnabled: globalEnabled,
+          variants: variants
         });
       }
     }

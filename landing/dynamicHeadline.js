@@ -2,7 +2,10 @@
 const headlines = [
     "Tired of waiting for backend development?",
     "Stuck debugging unstable API endpoints?",
-    "Frontend development blocked by backend issues?"
+    "Frontend development blocked by backend issues?",
+    "Your QA can't test without real data?",
+    "Don't know how to test different status codes?",
+    "Mockzilla makes easy to create interceptions for your frontend development.",
 ];
 
 // Function to get a random headline

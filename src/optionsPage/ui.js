@@ -2,7 +2,7 @@
 
 import { escapeHtml, flashStatus, isValidJSON } from './utils.js';
 import { selectRule, selectGroup, refresh } from './ruleManager.js';
-import { setRuleMeta, setRuleBody, deleteRule, deleteGroup, setGroup, getRules } from './storage.js';
+import { setRuleMeta, setRuleBody, deleteRule, deleteGroup, setGroup, getRules, setRuleVariantsMeta, setRuleVariantBody, deleteRuleVariant } from './storage.js';
 import { groupExpandedState, getSelectedId, getSelectedType, getGroupExpanded, setGroupExpanded, getSearchQuery, getSortOrder, getFilterStatus, getShowUngrouped, getDensity, clearSelection } from './state.js';
 
 function renderRulesList(rules, groups) {
@@ -265,6 +265,7 @@ function renderRuleDetails(rule) {
           <select class="matchType select w-full" aria-label="Match type">
             <option value="substring" ${rule.matchType === 'substring' ? 'selected' : ''}>Substring</option>
             <option value="exact" ${rule.matchType === 'exact' ? 'selected' : ''}>Exact</option>
+            <option value="wildcard" ${rule.matchType === 'wildcard' ? 'selected' : ''}>Wildcard</option>
           </select>
         </div>
         
@@ -306,6 +307,41 @@ function renderRuleDetails(rule) {
         <textarea class="body textarea" placeholder="Replacement body" aria-label="Replacement body">${escapeHtml(rule.body)}</textarea>
         <div class="validation text-xs text-red-600 mt-1 hidden" data-error="json" role="alert"></div>
       </div>
+      <div class="wildcard-section ${rule.matchType === 'wildcard' ? '' : 'hidden'}">
+        <div class="flex items-center justify-between mb-2">
+          <label class="label">Wildcard Variants</label>
+          <button class="add-variant btn btn-sm">Add Variant</button>
+        </div>
+        <div class="variants-list space-y-3">
+          ${(Array.isArray(rule.variants) ? rule.variants : []).map(v => `
+            <div class="variant-item border rounded p-2" data-key="${escapeHtml(v.key)}">
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
+                <input class="variant-key input w-full" placeholder="Captured key (e.g. 123 or a|b)" value="${escapeHtml(v.key)}" />
+                <select class="variant-bodyType select w-full">
+                  <option value="text" ${v.bodyType === 'text' ? 'selected' : ''}>Text</option>
+                  <option value="json" ${v.bodyType === 'json' ? 'selected' : ''}>JSON</option>
+                </select>
+                <select class="variant-statusCode select w-full">
+                  <option value="200" ${v.statusCode === 200 ? 'selected' : ''}>200</option>
+                  <option value="201" ${v.statusCode === 201 ? 'selected' : ''}>201</option>
+                  <option value="204" ${v.statusCode === 204 ? 'selected' : ''}>204</option>
+                  <option value="400" ${v.statusCode === 400 ? 'selected' : ''}>400</option>
+                  <option value="401" ${v.statusCode === 401 ? 'selected' : ''}>401</option>
+                  <option value="403" ${v.statusCode === 403 ? 'selected' : ''}>403</option>
+                  <option value="404" ${v.statusCode === 404 ? 'selected' : ''}>404</option>
+                  <option value="422" ${v.statusCode === 422 ? 'selected' : ''}>422</option>
+                  <option value="500" ${v.statusCode === 500 ? 'selected' : ''}>500</option>
+                  <option value="502" ${v.statusCode === 502 ? 'selected' : ''}>502</option>
+                  <option value="503" ${v.statusCode === 503 ? 'selected' : ''}>503</option>
+                </select>
+                <button class="variant-delete btn btn-sm btn-danger">Delete</button>
+              </div>
+              <textarea class="variant-body textarea" placeholder="Variant body">${escapeHtml(v.body || '')}</textarea>
+            </div>
+          `).join('')}
+          ${(!Array.isArray(rule.variants) || rule.variants.length === 0) ? '<div class="text-xs text-gray-500">No variants. Use Add Variant.</div>' : ''}
+        </div>
+      </div>
     </div>
   `;
 
@@ -318,6 +354,9 @@ function renderRuleDetails(rule) {
   const statusCodeEl = detailsContainer.querySelector('.statusCode');
   const bodyEl = detailsContainer.querySelector('.body');
   const enabledToggle = detailsContainer.querySelector('.enabled-toggle');
+  const wildcardSection = detailsContainer.querySelector('.wildcard-section');
+  const addVariantBtn = detailsContainer.querySelector('.add-variant');
+  const variantsListEl = detailsContainer.querySelector('.variants-list');
 
   nameEl.addEventListener('blur', async () => {
     rule.name = nameEl.value;
@@ -337,6 +376,10 @@ function renderRuleDetails(rule) {
     rule.matchType = matchTypeEl.value;
     await setRuleMeta(rule);
     flashStatus('Match type updated', 'success');
+    if (wildcardSection) {
+      if (rule.matchType === 'wildcard') wildcardSection.classList.remove('hidden');
+      else wildcardSection.classList.add('hidden');
+    }
   });
 
   patternEl.addEventListener('blur', async () => {
@@ -392,6 +435,84 @@ function renderRuleDetails(rule) {
       flashStatus('Body saved', 'success');
     }
   });
+
+  if (addVariantBtn) {
+    addVariantBtn.addEventListener('click', async () => {
+      const newVar = { key: '', bodyType: rule.bodyType, statusCode: rule.statusCode, body: '' };
+      rule.variants = Array.isArray(rule.variants) ? rule.variants.slice() : [];
+      rule.variants.push(newVar);
+      await setRuleVariantsMeta(rule.id, rule.variants);
+      renderRuleDetails(rule);
+      flashStatus('Variant added', 'success');
+    });
+  }
+
+  if (variantsListEl) {
+    variantsListEl.querySelectorAll('.variant-item').forEach(item => {
+      const keyInput = item.querySelector('.variant-key');
+      const bodyTypeInput = item.querySelector('.variant-bodyType');
+      const statusCodeInput = item.querySelector('.variant-statusCode');
+      const bodyInput = item.querySelector('.variant-body');
+      const deleteBtn = item.querySelector('.variant-delete');
+      const getIdx = () => (rule.variants || []).findIndex(v => String(v.key) === String(item.getAttribute('data-key') || ''));
+
+      keyInput.addEventListener('blur', async () => {
+        const idx = getIdx();
+        if (idx >= 0) {
+          rule.variants[idx].key = keyInput.value;
+          await setRuleVariantsMeta(rule.id, rule.variants);
+          // Update the key reference on the DOM element so subsequent edits use the new key
+          item.setAttribute('data-key', keyInput.value);
+          renderRulesList(window.currentRules || [], window.currentGroups || []);
+          flashStatus('Variant key saved', 'success');
+        }
+      });
+
+      bodyTypeInput.addEventListener('change', async () => {
+        const idx = getIdx();
+        if (idx >= 0) {
+          rule.variants[idx].bodyType = bodyTypeInput.value;
+          await setRuleVariantsMeta(rule.id, rule.variants);
+          flashStatus('Variant type updated', 'success');
+        }
+      });
+
+      statusCodeInput.addEventListener('change', async () => {
+        const idx = getIdx();
+        if (idx >= 0) {
+          rule.variants[idx].statusCode = parseInt(statusCodeInput.value, 10);
+          await setRuleVariantsMeta(rule.id, rule.variants);
+          flashStatus('Variant status updated', 'success');
+        }
+      });
+
+      bodyInput.addEventListener('blur', async () => {
+        const idx = getIdx();
+        if (idx >= 0) {
+          rule.variants[idx].body = bodyInput.value;
+          await setRuleVariantBody(rule.id, rule.variants[idx].key, rule.variants[idx].body);
+          if (bodyTypeInput.value === 'json') {
+            const ok = isValidJSON(bodyInput.value);
+            if (!ok) {
+              flashStatus('Invalid JSON', 'error');
+            } else {
+              flashStatus('Variant body saved', 'success');
+            }
+          } else {
+            flashStatus('Variant body saved', 'success');
+          }
+        }
+      });
+
+      deleteBtn.addEventListener('click', async () => {
+        const delKey = item.getAttribute('data-key') || '';
+        await deleteRuleVariant(rule.id, delKey);
+        rule.variants = (rule.variants || []).filter(v => String(v.key) !== String(delKey));
+        renderRuleDetails(rule);
+        flashStatus('Variant deleted', 'success');
+      });
+    });
+  }
 }
 
 function renderGroupDetails(group) {
